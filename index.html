@@ -258,7 +258,7 @@
                 const status = (i % 4 === 0) ? 'non-working' : 'working';
                 const hasDischarge = opType === 'import' || opType === 'both';
                 const hasLoad = opType === 'export' || opType === 'both';
-                const isDoubleBanked = i === 2 || i === 14 || i === 17; // TRITON 3, MERCHANT 15, CLIPPER 18
+                const isDoubleBanked = i === 2 || i === 17; // TRITON 3, CLIPPER 18
 
                 const mainVessel = {
                     id: `vessel-${vesselIdCounter++}`,
