@@ -1,834 +1,801 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Berth Monitoring - Realistic Port Layout</title>
-    <!-- Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* Use the Inter font family */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-        }
-        .vessel-bar-svg {
-            cursor: pointer;
-        }
-        .vessel-bar-svg rect {
-             /* Added smooth transition for stroke color and width */
-            transition: stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out;
-        }
-        .vessel-bar-svg:hover {
-            filter: brightness(1.15);
-        }
-        /* Custom styles for the progress bars */
-        .progress-bar-container {
-            background-color: #e9ecef;
-            border-radius: 9999px;
-            height: 0.75rem;
-            overflow: hidden;
-            width: 100%;
-        }
-        .progress-bar {
-            background-color: #3b82f6;
-            height: 100%;
-            border-radius: 9999px;
-            transition: width 0.3s ease-in-out;
-        }
-        /* Style for selected vessel */
-        .selected-svg rect {
-            stroke: #2563eb;
-            stroke-width: 4px;
-            stroke-opacity: 0.9;
-        }
-        /* Style for selected table row */
-        .selected-row {
-            background-color: #dbeafe !important; /* Blue-100 */
-        }
-        /* Tooltip style */
-        #tooltip {
-            position: absolute;
-            display: none;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            z-index: 100;
-            pointer-events: none; /* So it doesn't interfere with mouse events */
-        }
-        .berth-label {
-            font-size: 14px;
-            font-weight: bold;
-            fill: #4a5568;
-            text-anchor: middle;
-        }
-        /* Crane animation */
-        @keyframes move-trolley-v {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(50px); }
-            100% { transform: translateY(0); }
-        }
-        .crane-trolley-working-v {
-            animation: move-trolley-v 6s ease-in-out infinite;
-        }
-    </style>
-</head>
-<body class="text-gray-800 text-sm">
-
-    <div id="tooltip"></div>
-
-    <!-- Fullscreen Modal -->
-    <div id="fullscreen-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-50">
-        <div id="fullscreen-content" class="w-full h-full bg-white rounded-lg p-2 relative">
-             <button id="close-fullscreen" class="absolute top-2 right-2 text-gray-800 bg-white rounded-full p-2 z-10 hover:bg-gray-200">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
-                 </svg>
-             </button>
-             <!-- The cloned SVG will go here -->
-        </div>
-    </div>
-
-    <div class="min-h-screen flex flex-col p-4 gap-4">
-
-        <!-- Header -->
-        <header class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-            <h1 class="text-xl font-bold text-gray-700">Berth Monitoring</h1>
-            <div class="flex items-center gap-4">
-                <button id="refresh-button" class="flex items-center gap-2 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
-                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
-                    </svg>
-                    Refresh
-                </button>
-                 <button id="toggle-sidebar" class="p-2 rounded-md hover:bg-gray-200 transition-colors">
-                     <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-chevron-double-right" viewBox="0 0 16 16">
-                         <path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
-                         <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>
+ <!DOCTYPE html>
+ <html lang="en">
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Berth Monitoring - Realistic Port Layout</title>
+     <script src="https://cdn.tailwindcss.com"></script>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+     <style>
+         /* Use the Inter font family */
+         body {
+             font-family: 'Inter', sans-serif;
+             background-color: #f0f2f5;
+         }
+         .vessel-bar-svg {
+             cursor: pointer;
+         }
+         .vessel-bar-svg rect {
+              /* Added smooth transition for stroke color and width */
+             transition: stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out;
+         }
+         .vessel-bar-svg:hover {
+             filter: brightness(1.15);
+         }
+         /* Custom styles for the progress bars */
+         .progress-bar-container {
+             background-color: #e9ecef;
+             border-radius: 9999px;
+             height: 0.75rem;
+             overflow: hidden;
+             width: 100%;
+         }
+         .progress-bar {
+             background-color: #3b82f6;
+             height: 100%;
+             border-radius: 9999px;
+             transition: width 0.3s ease-in-out;
+         }
+         /* Style for selected vessel */
+         .selected-svg rect {
+             stroke: #2563eb;
+             stroke-width: 4px;
+             stroke-opacity: 0.9;
+         }
+         /* Style for selected table row */
+         .selected-row {
+             background-color: #dbeafe !important; /* Blue-100 */
+         }
+         /* Tooltip style */
+         #tooltip {
+             position: absolute;
+             display: none;
+             background-color: rgba(0, 0, 0, 0.8);
+             color: white;
+             padding: 8px 12px;
+             border-radius: 6px;
+             font-size: 0.875rem;
+             z-index: 100;
+             pointer-events: none; /* So it doesn't interfere with mouse events */
+         }
+         .berth-label {
+             font-size: 14px;
+             font-weight: bold;
+             fill: #4a5568;
+             text-anchor: middle;
+         }
+         /* Crane animation */
+         @keyframes move-trolley-v {
+             0% { transform: translateY(0); }
+             50% { transform: translateY(50px); }
+             100% { transform: translateY(0); }
+         }
+         .crane-trolley-working-v {
+             animation: move-trolley-v 6s ease-in-out infinite;
+         }
+     </style>
+ </head>
+ <body class="text-gray-800 text-sm">
+ 
+     <div id="tooltip"></div>
+ 
+     <div id="fullscreen-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-50">
+         <div id="fullscreen-content" class="w-full h-full bg-white rounded-lg p-2 relative">
+              <button id="close-fullscreen" class="absolute top-2 right-2 text-gray-800 bg-white rounded-full p-2 z-10 hover:bg-gray-200">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                      <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                  </svg>
+              </button>
+              <!-- The cloned SVG will go here -->
+              </div>
+     </div>
+ 
+     <div class="min-h-screen flex flex-col p-4 gap-4">
+ 
+         <header class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
+             <h1 class="text-xl font-bold text-gray-700">Berth Monitoring</h1>
+             <div class="flex items-center gap-4">
+                 <button id="refresh-button" class="flex items-center gap-2 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors shadow-sm">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                         <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                         <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
                      </svg>
+                     Refresh
                  </button>
-            </div>
-        </header>
-
-        <!-- Main Content Grid -->
-        <main id="main-grid" class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-            <!-- Left and Center Content (Berth Chart + Vessel Table) -->
-            <div id="left-column" class="lg:col-span-2 flex flex-col gap-4 transition-all duration-300">
-
-                <!-- Berth Visualization Card -->
-                <div class="bg-white p-4 rounded-lg shadow-sm flex-grow">
-                    <div id="svg-container" class="w-full h-[32rem] border border-gray-200 rounded-lg bg-cyan-100 cursor-pointer" title="Double click to expand">
-                        <svg id="berth-svg" width="100%" height="100%" viewBox="0 0 1200 600">
-                            <defs>
-                                <pattern id="water" patternUnits="userSpaceOnUse" width="60" height="60">
-                                    <path d="M 0 15 C 15 0, 30 0, 45 15 S 75 30, 90 15" stroke="#60a5fa" stroke-width="0.5" fill="none" />
-                                </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#water)" />
-                            
-                            <!-- Port Layout -->
-                            <g id="port-layout">
-                                <!-- Main Landmass -->
-                                <rect x="0" y="0" width="1200" height="100" fill="#d1d5db"/>
-                                <!-- Pier 1 -->
-                                <path d="M 150 100 V 550 H 350 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
-                                <!-- Pier 2 -->
-                                <path d="M 850 100 V 550 H 1050 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
-                                
-                                <!-- Road Markings -->
-                                <g id="road-lanes-container"></g>
-                                <!-- Bitt Container -->
-                                <g id="bitt-container-svg"></g>
-                                <!-- Berth Labels -->
-                                <g id="berth-labels-container"></g>
-                            </g>
-                            
-                             <!-- Truck Container -->
-                            <g id="truck-container-svg"></g>
-                            <!-- Vessel Container -->
-                            <g id="vessel-container-svg"></g>
-                        </svg>
-                    </div>
-                </div>
-
-                <!-- Vessel Monitoring Status Table -->
-                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                    <div class="bg-blue-600 text-white p-3 font-bold">
-                        Vessel Monitoring Status
-                    </div>
-                    <div class="overflow-x-auto h-64">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 sticky top-0">
-                                <tr>
-                                    <th class="p-3 font-semibold">VesCallID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
-                                </tr>
-                            </thead>
-                            <tbody id="vessel-table-body">
-                                <!-- JS will populate table rows here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Sidebar -->
-            <div id="right-sidebar" class="lg:col-span-1 flex flex-col gap-4 transition-all duration-300">
-                <div class="bg-white p-4 rounded-lg shadow-sm space-y-6">
-                    <!-- Filters -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <h3 class="font-bold mb-4 text-lg">Operation Type</h3>
-                            <div class="space-y-3">
-                                <label class="flex items-center text-base"><div class="w-5 h-5 bg-green-500 rounded-sm mr-3"></div>Import</label>
-                                <label class="flex items-center text-base"><div class="w-5 h-5 bg-blue-500 rounded-sm mr-3"></div>Export</label>
-                                <label class="flex items-center text-base"><div class="w-5 h-5 bg-purple-500 rounded-sm mr-3"></div>Both</label>
-                            </div>
-                        </div>
-                        <div>
-                            <h3 class="font-bold mb-4 text-lg">Vessel Status</h3>
-                            <div class="space-y-3">
-                                <label class="flex items-center text-base"><div class="w-5 h-5 border-4 border-yellow-400 rounded-sm mr-3"></div>On Working</label>
-                                <label class="flex items-center text-base"><div class="w-5 h-5 border-4 border-red-500 rounded-sm mr-3"></div>Non Working</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="border-t border-gray-200"></div>
-                    <!-- Vessel Selection -->
-                    <div>
-                        <h2 id="vessel-name-display" class="text-xl font-bold text-gray-800 break-all">-</h2>
-                        <div class="mt-2">
-                            <label for="unit-type" class="block text-base font-bold text-gray-700 mb-1">Unit Type</label>
-                            <select id="unit-type" name="unit-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-lg font-bold border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
-                                <option>MT</option>
-                                <option>M3</option>
-                                <option>QTY</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Discharging -->
-                    <div id="discharging-section" class="space-y-3">
-                        <!-- JS will populate content -->
-                    </div>
-                    
-                    <!-- Loading -->
-                    <div id="loading-section" class="space-y-3">
-                        <!-- JS will populate content -->
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-
-        // --- DATA ---
-        function generateVesselData() {
-            const data = [];
-            const names = ["OCEANIC", "NEPTUNE", "TRITON", "POSEIDON", "ATLANTIS", "VOYAGER", "DISCOVERY", "PIONEER", "EXPLORER", "NAVIGATOR", "MARINER", "SEAFARER", "ISLANDER", "COASTER", "MERCHANT", "TRADER", "CARRIER", "CLIPPER", "NOMAD", "ROVER", "PATHFINDER", "VENTURER", "CRUSADER", "PILGRIM"];
-            const commodities = ["Electronics", "Apparel", "Grain", "Steel Coils", "Crude Oil", "LNG", "Vehicles", "Lumber", "Chemicals", "Produce"];
-            const opTypes = ['import', 'export', 'both'];
-            
-            const berths = [
-                // Pier 1 - Left Side (5 berths)
-                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+1}`, x: 125, y: 105 + i * 85, width: 20, height: 80})),
-                // Pier 1 - Right Side (5 berths)
-                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+6}`, x: 355, y: 105 + i * 85, width: 20, height: 80})),
-                // Top Connecting Pier (5 berths)
-                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+11}`, x: 380 + i * 95, y: 75, width: 90, height: 20})),
-                // Pier 2 - Left Side (5 berths)
-                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+16}`, x: 825, y: 105 + i * 85, width: 20, height: 80})),
-                // Pier 2 - Right Side (4 berths)
-                ...Array(4).fill(0).map((_, i) => ({berthNo: `B${i+21}`, x: 1055, y: 105 + i * 85, width: 20, height: 80})),
-            ];
-
-            let vesselIdCounter = 1;
-
-            for (let i = 0; i < 24; i++) {
-                const opType = opTypes[i % opTypes.length];
-                const status = (i % 4 === 0) ? 'non-working' : 'working';
-                const hasDischarge = opType === 'import' || opType === 'both';
-                const hasLoad = opType === 'export' || opType === 'both';
-                const isDoubleBanked = i === 2 || i === 17; // TRITON 3, CLIPPER 18
-
-                const mainVessel = {
-                    id: `vessel-${vesselIdCounter++}`,
-                    name: `${names[i]} ${i+1}`,
-                    vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}`,
-                    atb: `15/07/2025 ${String(i).padStart(2, '0')}:00`,
-                    etd: `20/07/2025 ${String(i).padStart(2, '0')}:00`,
-                    berthNo: berths[i].berthNo,
-                    shipCallNo: `SC${1001+i}`,
-                    loa: 150 + (i * 10 % 150),
-                    mt: 20000 + (i * 5000),
-                    commodityGroup: 'Mixed',
-                    commodity: commodities[i % commodities.length],
-                    doubleBanking: isDoubleBanked,
-                    status: status,
-                    operationType: opType,
-                    position: berths[i],
-                    data: {
-                        discharging: {
-                            total: { MT: hasDischarge ? 50000 : 0, M3: hasDischarge ? 32000 : 0, QTY: hasDischarge ? 2000 : 0 },
-                            warehouse: { MT: { current: hasDischarge ? 5000 : 0, total: 15000 }, M3: { current: 3200, total: 9600 }, QTY: { current: 200, total: 600 } },
-                            truck: { MT: { current: hasDischarge ? 7500 : 0, total: 10000 }, M3: { current: 4800, total: 6400 }, QTY: { current: 300, total: 400 } },
-                            barge: { MT: { current: hasDischarge && isDoubleBanked ? 12500 : 0, total: 25000 }, M3: { current: 8000, total: 16000 }, QTY: { current: 500, total: 1000 } }
-                        },
-                        loading: {
-                            total: { MT: hasLoad ? 40000 : 0, M3: hasLoad ? 24000 : 0, QTY: hasLoad ? 1800 : 0 },
-                            warehouse: { MT: { current: hasLoad ? 10000 : 0, total: 15000 }, M3: { current: 6000, total: 9000 }, QTY: { current: 500, total: 700 } },
-                            truck: { MT: { current: hasLoad ? 15000 : 0, total: 20000 }, M3: { current: 9000, total: 12000 }, QTY: { current: 700, total: 900 } },
-                            barge: { MT: { current: 0, total: 5000 }, M3: { current: 0, total: 3000 }, QTY: { current: 0, total: 200 } }
-                        }
-                    }
-                };
-                data.push(mainVessel);
-
-                if (isDoubleBanked) {
-                    const bargePos = {...mainVessel.position};
-                    // If vessel is on the left side of a pier (B1-5, B16-20), barge is on its left.
-                    // Otherwise, it's on the right side of a pier (B6-10, B21-24), so barge is on its right.
-                    if (mainVessel.position.x === 125 || mainVessel.position.x === 825) {
-                        bargePos.x -= 25;
-                    } else {
-                        bargePos.x += 25;
-                    }
-                    bargePos.height *= 0.8;
-                    bargePos.width *= 0.8;
-
-                    data.push({
-                        id: `vessel-${vesselIdCounter++}`,
-                        name: `${names[i]} BARGE`,
-                        vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}-B`,
-                        atb: mainVessel.atb, etd: mainVessel.etd, berthNo: `${mainVessel.berthNo} (DB)`,
-                        shipCallNo: `SC${1001+i}-B`, loa: 80, mt: 10000,
-                        commodityGroup: mainVessel.commodityGroup, commodity: mainVessel.commodity,
-                        doubleBanking: false, status: 'working', operationType: 'export',
-                        position: bargePos,
-                        data: {
-                            discharging: { total: { MT: 0, M3: 0, QTY: 0 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } } },
-                            loading: { total: { MT: 25000, M3: 16000, QTY: 1000 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 12500, total: 25000 }, M3: { current: 8000, total: 16000 }, QTY: { current: 500, total: 1000 } } }
-                        }
-                    });
-                }
-            }
-            return data;
-        }
-        
-        let vesselData = generateVesselData();
-        let currentVessel = null;
-
-        // --- DOM ELEMENTS ---
-        const svgContainer = document.getElementById('svg-container');
-        const berthSvg = document.getElementById('berth-svg');
-        const vesselContainer = document.getElementById('vessel-container-svg');
-        const truckContainer = document.getElementById('truck-container-svg');
-        const roadLanesContainer = document.getElementById('road-lanes-container');
-        const berthLabelsContainer = document.getElementById('berth-labels-container');
-        const bittContainer = document.getElementById('bitt-container-svg');
-        const vesselNameDisplay = document.getElementById('vessel-name-display');
-        const unitTypeSelect = document.getElementById('unit-type');
-        const dischargingSection = document.getElementById('discharging-section');
-        const loadingSection = document.getElementById('loading-section');
-        const vesselTableBody = document.getElementById('vessel-table-body');
-        const tooltip = document.getElementById('tooltip');
-        const toggleSidebarBtn = document.getElementById('toggle-sidebar');
-        const leftColumn = document.getElementById('left-column');
-        const rightSidebar = document.getElementById('right-sidebar');
-        const toggleIcon = document.getElementById('toggle-icon');
-        const refreshButton = document.getElementById('refresh-button');
-        const fullscreenModal = document.getElementById('fullscreen-modal');
-        const fullscreenContent = document.getElementById('fullscreen-content');
-        const closeFullscreenBtn = document.getElementById('close-fullscreen');
-        
-        // --- FUNCTIONS ---
-
-        function getOperationColor(operationType) {
-            switch (operationType) {
-                case 'import': return '#48bb78'; // green-500
-                case 'export': return '#4299e1'; // blue-500
-                case 'both': return '#9f7aea'; // purple-500
-                default: return '#a0aec0'; // gray-500
-            }
-        }
-        
-        function getStatusColor(status) {
-             return status === 'working' ? '#ecc94b' : '#f56565'; // yellow-400 or red-500
-        }
-
-        function renderVessels() {
-            vesselContainer.innerHTML = vesselData.map(vessel => {
-                const fillColor = getOperationColor(vessel.operationType);
-                const strokeColor = getStatusColor(vessel.status);
-                const isVertical = vessel.position.width < vessel.position.height;
-                const textRotation = isVertical ? -90 : 0;
-                const textX = vessel.position.width / 2;
-                const textY = vessel.position.height / 2;
-                const pos = vessel.position;
-                
-                let craneHTML = '';
-                if (!vessel.berthNo.includes('(DB)')) {
-                    const isWorking = vessel.status === 'working';
-                    let craneX, craneY, armLength, armHeight, trolleyWidth, trolleyHeight, hookPath;
-                    let trolleyAnimation = '';
-
-                    // Crane positioning logic
-                    if (pos.y < 100) { // Top Pier (B11-B15)
-                        craneX = pos.x + pos.width / 2 - 25;
-                        craneY = pos.y + pos.height; // Positioned on the pier (land side)
-                        armLength = 50; armHeight = 30; trolleyWidth = 5; trolleyHeight = 10;
-                        hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
-                        if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; ${armLength - trolleyWidth} 0; 0 0" dur="5s" repeatCount="indefinite" />`;
-                    } else { // Side Piers
-                        armLength = 30; armHeight = 50; trolleyWidth = 10; trolleyHeight = 5;
-                        hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
-                        if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; 0 ${armHeight - trolleyHeight}; 0 0" dur="5s" repeatCount="indefinite" />`;
-                        craneY = pos.y + pos.height / 2 - 25;
-
-                        if (pos.x < 200) { // Pier 1 Left (B1-B5) - Crane on right (land)
-                            craneX = pos.x + pos.width;
-                        } else if (pos.x < 500) { // Pier 1 Right (B6-B10) - Crane on left (land)
-                            craneX = pos.x - armLength;
-                        } else if (pos.x < 900) { // Pier 2 Left (B16-B20) - Crane on right (land)
-                            craneX = pos.x + pos.width;
-                        } else { // Pier 2 Right (B21-B24) - Crane on left (land)
-                            craneX = pos.x - armLength;
-                        }
-                    }
-                    
-                    craneHTML = `
-                        <g class="crane" transform="translate(${craneX}, ${craneY})">
-                            <rect width="${armLength}" height="${armHeight}" fill="#4a5568" opacity="0.9" />
-                            <g class="crane-trolley">
-                                ${trolleyAnimation}
-                                <rect width="${trolleyWidth}" height="${trolleyHeight}" fill="#1f2937" />
-                                <path d="${hookPath}" stroke="#111827" stroke-width="2" />
-                            </g>
-                        </g>
-                    `;
-                }
-
-                return `
-                    <g>
-                        <g class="vessel-bar-svg" data-vessel-id="${vessel.id}" transform="translate(${pos.x}, ${pos.y})">
-                            <rect 
-                                width="${pos.width}" 
-                                height="${pos.height}"
-                                fill="${fillColor}"
-                                stroke="${strokeColor}"
-                                rx="3"
-                                stroke-width="2"
-                            />
-                            <text x="${textX}" y="${textY}" 
-                                fill="white" font-size="10" font-weight="bold" 
-                                text-anchor="middle" dominant-baseline="middle"
-                                transform="rotate(${textRotation}, ${textX}, ${textY})"
-                                style="pointer-events: none;">
-                                ${vessel.name}
-                            </text>
-                        </g>
-                        ${craneHTML}
-                    </g>
-                `;
-            }).join('');
-        }
-        
-        /**
-         * Renders the berth labels on the SVG layout.
-         * FIX: The logic was changed to check the Y-coordinate first to correctly identify
-         * the top pier berths (B11-B15). The original logic used an X-coordinate check
-         * that incorrectly categorized B11 and B12 as belonging to "Pier 1 Right",
-         * causing their labels to be misplaced.
-         */
-        function renderBerthLabels() {
-            const uniqueBerths = [...new Map(vesselData.filter(v => !v.berthNo.includes('(DB)')).map(v => [v.berthNo, v])).values()];
-            berthLabelsContainer.innerHTML = uniqueBerths.map(vessel => {
-                const pos = vessel.position;
-                let x, y, rotation = 0;
-
-                // Check for Top Pier first based on Y coordinate to prevent mis-categorization
-                if (pos.y < 100) { // Top Pier (B11-B15)
-                    x = pos.x + pos.width / 2;
-                    y = pos.y - 15; // Position label above the pier
-                    rotation = 0;
-                } else if (pos.x < 200) { // Pier 1 Left (B1-B5)
-                    x = pos.x - 15;
-                    y = pos.y + pos.height / 2;
-                    rotation = -90;
-                } else if (pos.x < 500) { // Pier 1 Right (B6-B10)
-                    x = pos.x + pos.width + 15;
-                    y = pos.y + pos.height / 2;
-                    rotation = 90;
-                } else if (pos.x < 900) { // Pier 2 Left (B16-B20)
-                    x = pos.x - 15;
-                    y = pos.y + pos.height / 2;
-                    rotation = -90;
-                } else { // Pier 2 Right (B21-B24)
-                    x = pos.x + pos.width + 15;
-                    y = pos.y + pos.height / 2;
-                    rotation = 90;
-                }
-                return `<text x="${x}" y="${y}" class="berth-label" transform="rotate(${rotation}, ${x}, ${y})">${vessel.berthNo}</text>`;
-            }).join('');
-        }
-
-
-        function renderBitts() {
-            const bittSpacing = 20; // Denser bitts
-            let bittHTML = '';
-            const pierEdges = [
-                { start: { x: 150, y: 100 }, end: { x: 150, y: 550 } }, // Pier 1 Left
-                { start: { x: 350, y: 100 }, end: { x: 350, y: 550 } }, // Pier 1 Right
-                { start: { x: 350, y: 100 }, end: { x: 850, y: 100 } }, // Top Pier
-                { start: { x: 850, y: 100 }, end: { x: 850, y: 550 } }, // Pier 2 Left
-                { start: { x: 1050, y: 100 }, end: { x: 1050, y: 550 } },// Pier 2 Right
-            ];
-
-            pierEdges.forEach(edge => {
-                const dx = edge.end.x - edge.start.x;
-                const dy = edge.end.y - edge.start.y;
-                const length = Math.sqrt(dx*dx + dy*dy);
-                const numBitts = Math.floor(length / bittSpacing);
-                
-                for (let i = 1; i <= numBitts; i++) {
-                    const x = edge.start.x + (dx / length) * (i * bittSpacing);
-                    const y = edge.start.y + (dy / length) * (i * bittSpacing);
-                    bittHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#ef4444" />`; // Red bitts
-                }
-            });
-            bittContainer.innerHTML = bittHTML;
-        }
-        
-        function renderRoadLanes() {
-            let lanesHTML = '';
-            const lineSpacing = 25;
-            const stroke = 'stroke="#f59e0b" stroke-width="2"';
-
-            // Pier 1 parking lanes
-            for (let x = 170; x < 350; x += lineSpacing) {
-                lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
-            }
-            // Pier 2 parking lanes
-            for (let x = 870; x < 1050; x += lineSpacing) {
-                lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
-            }
-            // Top landside parking lanes
-            for (let y = 20; y < 80; y += lineSpacing) {
-                 lanesHTML += `<path d="M 150 ${y} L 1050 ${y}" ${stroke} />`;
-            }
-             // Main driving lanes (solid)
-            lanesHTML += `<path d="M 360 85 L 840 85" stroke="#f59e0b" stroke-width="3" />`; // Landside main
-            lanesHTML += `<path d="M 250 100 L 250 550" stroke="#f59e0b" stroke-width="3" />`; // Pier 1 main
-            lanesHTML += `<path d="M 950 100 L 950 550" stroke="#f59e0b" stroke-width="3" />`; // Pier 2 main
-
-            roadLanesContainer.innerHTML = lanesHTML;
-        }
-
-        function renderTrucks() {
-            let truckHTML = '';
-            const truckColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-            
-            const workingVessels = vesselData.filter(v => v.status === 'working' && !v.berthNo.includes('(DB)'));
-            if (workingVessels.length === 0) {
-                truckContainer.innerHTML = '';
-                return; // No trucks if no vessels are working
-            }
-
-            const numTrucks = 25; // Increased truck count
-            for(let i=0; i < numTrucks; i++) {
-                const targetVessel = workingVessels[i % workingVessels.length];
-                const onPier1 = targetVessel.position.x < 500;
-                const onTopPier = targetVessel.position.y < 100;
-                
-                // Define start, corner, parking and crane coordinates
-                const startX = 400 + Math.random() * 400;
-                const startY = 85;
-                
-                let pierRoadX, targetY, parkingX, parkingY;
-
-                if (onTopPier) {
-                    pierRoadX = targetVessel.position.x + targetVessel.position.width / 2;
-                    targetY = startY;
-                    parkingX = pierRoadX;
-                    parkingY = targetVessel.position.y + targetVessel.position.height + 20; // Park below crane
-                } else { // On Pier 1 or 2
-                    pierRoadX = onPier1 ? 250 : 950;
-                    targetY = targetVessel.position.y + targetVessel.position.height / 2;
-                    parkingY = targetY;
-                    // Park next to the pier road, closer to the vessel
-                    parkingX = onPier1 ? pierRoadX + 25 : pierRoadX - 25; 
-                }
-
-                const pathToParking = `M ${startX},${startY} L ${pierRoadX},${startY} L ${pierRoadX},${targetY} L ${parkingX},${parkingY}`;
-                const pathFromParking = `M ${parkingX},${parkingY} L ${pierRoadX},${targetY} L ${pierRoadX},${startY} L ${startX},${startY}`;
-                
-                const fullPath = `${pathToParking} ${pathFromParking.substring(1)}`; // Combine paths
-
-                // Use keyPoints to create the pause. The path to parking is the first half of the animation.
-                const keyPoints = "0; 0.5; 0.5; 1"; 
-                const totalDuration = 15 + Math.random() * 8; // 15-23 seconds for a round trip
-                const pauseDuration = 2;
-                
-                // Adjust keyTimes to insert the pause correctly
-                const travelDuration = totalDuration - pauseDuration;
-                const timeToPause = travelDuration / 2;
-                const timeAfterPause = timeToPause + pauseDuration;
-                const keyTimes = `0; ${timeToPause / totalDuration}; ${timeAfterPause / totalDuration}; 1`;
-
-                truckHTML += `
-                    <g>
-                        <g>
-                             <animateMotion 
-                                 dur="${totalDuration}s" 
-                                 begin="${i * 1.5}s" 
-                                 repeatCount="indefinite" 
-                                 rotate="auto"
-                                 path="${fullPath}"
-                                 keyTimes="${keyTimes}"
-                                 keyPoints="${keyPoints}"
-                                 calcMode="linear"
-                                 />
-                            <!-- Truck Body -->
-                            <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
-                            <!-- Truck Cab -->
-                            <rect x="4" y="-5" width="8" height="10" fill="#6b7280" rx="1" />
-                        </g>
-                    </g>
-                `;
-            }
-            truckContainer.innerHTML = truckHTML;
-        }
-        
-        function renderTable() {
-            vesselTableBody.innerHTML = vesselData.map(vessel => {
-                const isChecked = vessel.doubleBanking ? 'checked' : '';
-                const rowClass = vessel.status === 'working' ? 'hover:bg-gray-50' : 'bg-red-50 hover:bg-red-100';
-                return `
-                    <tr data-vescallid="${vessel.vesCallId}" class="border-b ${rowClass}">
-                        <td class="p-3">${vessel.vesCallId}</td>
-                        <td class="p-3">${vessel.name}</td>
-                        <td class="p-3">${vessel.berthNo}</td>
-                        <td class="p-3">${vessel.shipCallNo}</td>
-                        <td class="p-3">${vessel.loa}</td>
-                        <td class="p-3">${vessel.atb}</td>
-                        <td class="p-3">${vessel.etd}</td>
-                        <td class="p-3">${vessel.mt}</td>
-                        <td class="p-3">${vessel.commodityGroup}</td>
-                        <td class="p-3">${vessel.commodity}</td>
-                        <td class="p-3 text-center"><input type="checkbox" ${isChecked} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" disabled></td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        
-        function updateSidebar(vessel) {
-            currentVessel = vessel;
-            vesselNameDisplay.innerHTML = `<span class="font-bold">${vessel.name}</span> <span class="text-gray-500 font-normal">/ ${vessel.vesCallId}</span>`;
-            
-            document.querySelectorAll('.vessel-bar-svg').forEach(bar => bar.classList.remove('selected-svg'));
-            document.querySelector(`[data-vessel-id='${vessel.id}']`).classList.add('selected-svg');
-
-            vesselTableBody.querySelectorAll('tr').forEach(row => row.classList.remove('selected-row'));
-            const tableRow = vesselTableBody.querySelector(`tr[data-vescallid="${vessel.vesCallId}"]`);
-            if (tableRow) {
-                tableRow.classList.add('selected-row');
-            }
-
-            updateProgressBars();
-        }
-
-        function createProgressHTML(title, data, unit, colorClass = 'bg-blue-500') {
-            const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
-            return `
-                <div class="border border-gray-300 rounded-lg p-3 ml-4">
-                    <p class="text-gray-600">${title}: ${data.current.toFixed(2)} / ${data.total.toFixed(2)} (${unit}) ${percentage.toFixed(2)}%</p>
-                    <div class="progress-bar-container mt-1"><div class="progress-bar ${colorClass}" style="width: ${percentage}%;"></div></div>
-                </div>
-            `;
-        }
-
-        function updateProgressBars() {
-            if (!currentVessel) {
-                dischargingSection.innerHTML = '';
-                loadingSection.innerHTML = '';
-                return;
-            }
-
-            const unit = unitTypeSelect.value;
-            
-            const discharge = currentVessel.data.discharging;
-            const totalDischargeCurrent = discharge.warehouse[unit].current + discharge.truck[unit].current + discharge.barge[unit].current;
-            const totalDischarge = discharge.total[unit];
-            
-            if (totalDischarge > 0) {
-                 const dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
-                 let dischargingHTML = `
-                      <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
-                          <h4 class="font-bold text-blue-800">Discharging</h4>
-                          <p class="font-semibold text-gray-600">Total: ${totalDischargeCurrent.toFixed(2)} / ${totalDischarge.toFixed(2)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
-                          <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
-                      </div>
-                `;
-                dischargingHTML += createProgressHTML('To Warehouse', discharge.warehouse[unit], unit);
-                dischargingHTML += createProgressHTML('Direct by Truck', discharge.truck[unit], unit);
-                dischargingHTML += createProgressHTML('Direct by Barge', discharge.barge[unit], unit);
-                dischargingSection.innerHTML = dischargingHTML;
-            } else {
-                dischargingSection.innerHTML = '';
-            }
-
-
-            const loading = currentVessel.data.loading;
-            const totalLoadingCurrent = loading.warehouse[unit].current + loading.truck[unit].current + loading.barge[unit].current;
-            const totalLoading = loading.total[unit];
-
-            if (totalLoading > 0) {
-                const loadingPercentage = (totalLoadingCurrent / totalLoading) * 100;
-                let loadingHTML = `
-                     <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
-                         <h4 class="font-bold text-yellow-800">Loading</h4>
-                         <p class="font-semibold text-gray-600">Total: ${totalLoadingCurrent.toFixed(2)} / ${totalLoading.toFixed(2)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
-                         <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
+                  <button id="toggle-sidebar" class="p-2 rounded-md hover:bg-gray-200 transition-colors">
+                      <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-chevron-double-right" viewBox="0 0 16 16">
+                          <path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
+                          <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>
+                      </svg>
+                  </button>
+             </div>
+         </header>
+ 
+         <main id="main-grid" class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4">
+ 
+             <div id="left-column" class="lg:col-span-2 flex flex-col gap-4 transition-all duration-300">
+ 
+                 <div class="bg-white p-4 rounded-lg shadow-sm flex-grow">
+                     <div id="svg-container" class="w-full h-[32rem] border border-gray-200 rounded-lg bg-cyan-100 cursor-pointer" title="Double click to expand">
+                         <svg id="berth-svg" width="100%" height="100%" viewBox="0 0 1200 600">
+                             <defs>
+                                 <pattern id="water" patternUnits="userSpaceOnUse" width="60" height="60">
+                                     <path d="M 0 15 C 15 0, 30 0, 45 15 S 75 30, 90 15" stroke="#60a5fa" stroke-width="0.5" fill="none" />
+                                 </pattern>
+                             </defs>
+                             <rect width="100%" height="100%" fill="url(#water)" />
+                             
+                             <g id="port-layout">
+                                 <rect x="0" y="0" width="1200" height="100" fill="#d1d5db"/>
+                                 <path d="M 150 100 V 550 H 350 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
+                                 <path d="M 850 100 V 550 H 1050 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
+                                 
+                                 <g id="road-lanes-container"></g>
+                                 <g id="bitt-container-svg"></g>
+                                 <g id="berth-labels-container"></g>
+                             </g>
+                             
+                              <g id="truck-container-svg"></g>
+                             <g id="vessel-container-svg"></g>
+                         </svg>
                      </div>
-                `;
-                loadingHTML += createProgressHTML('From Warehouse', loading.warehouse[unit], unit, 'bg-yellow-500');
-                loadingHTML += createProgressHTML('Direct by Truck', loading.truck[unit], unit, 'bg-yellow-500');
-                loadingHTML += createProgressHTML('Direct by Barge', loading.barge[unit], unit, 'bg-yellow-500');
-                loadingSection.innerHTML = loadingHTML;
-            } else {
-                loadingSection.innerHTML = '';
-            }
-        }
-        
-        function fullRender() {
-            renderRoadLanes();
-            renderVessels();
-            renderTable();
-            renderBerthLabels();
-            renderBitts();
-            renderTrucks();
-            if (vesselData.length > 0) {
-                const reselectedVessel = vesselData.find(v => v.id === (currentVessel ? currentVessel.id : null)) || vesselData[0];
-                updateSidebar(reselectedVessel);
-            }
-        }
-
-        // --- EVENT LISTENERS ---
-
-        vesselContainer.addEventListener('click', (e) => {
-            const vesselEl = e.target.closest('[data-vessel-id]');
-            if (vesselEl) {
-                const vesselId = vesselEl.dataset.vesselId;
-                const selectedVesselData = vesselData.find(v => v.id === vesselId);
-                if (selectedVesselData) {
-                    updateSidebar(selectedVesselData);
-                }
-            }
-        });
-
-        vesselContainer.addEventListener('mouseover', (e) => {
-            const vesselEl = e.target.closest('[data-vessel-id]');
-            if (vesselEl) {
-                const vesselId = vesselEl.dataset.vesselId;
-                const vessel = vesselData.find(v => v.id === vesselId);
-                if (vessel) {
-                    tooltip.innerHTML = `
-                        <div><strong>VesCallID:</strong> ${vessel.vesCallId}</div>
-                        <div><strong>ATB:</strong> ${vessel.atb}</div>
-                        <div><strong>ETD:</strong> ${vessel.etd}</div>
-                    `;
-                    tooltip.style.display = 'block';
-                }
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            tooltip.style.left = (e.clientX + 15) + 'px';
-            tooltip.style.top = (e.clientY + 15) + 'px';
-        });
-
-        vesselContainer.addEventListener('mouseout', () => {
-            tooltip.style.display = 'none';
-        });
-
-        unitTypeSelect.addEventListener('change', () => {
+                 </div>
+ 
+                 <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                     <div class="bg-blue-600 text-white p-3 font-bold">
+                         Vessel Monitoring Status
+                     </div>
+                     <div class="overflow-x-auto h-64">
+                         <table class="w-full text-left">
+                             <thead class="bg-gray-50 sticky top-0">
+                                 <tr>
+                                     <th class="p-3 font-semibold">VesCallID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="vessel-table-body">
+                                 </tbody>
+                         </table>
+                     </div>
+                 </div>
+             </div>
+ 
+             <div id="right-sidebar" class="lg:col-span-1 flex flex-col gap-4 transition-all duration-300">
+                 <div class="bg-white p-4 rounded-lg shadow-sm space-y-6">
+                     <div class="grid grid-cols-2 gap-4">
+                         <div>
+                             <h3 class="font-bold mb-4 text-lg">Operation Type</h3>
+                             <div class="space-y-3">
+                                 <label class="flex items-center text-base"><div class="w-5 h-5 bg-green-500 rounded-sm mr-3"></div>Import</label>
+                                 <label class="flex items-center text-base"><div class="w-5 h-5 bg-blue-500 rounded-sm mr-3"></div>Export</label>
+                                 <label class="flex items-center text-base"><div class="w-5 h-5 bg-purple-500 rounded-sm mr-3"></div>Both</label>
+                             </div>
+                         </div>
+                         <div>
+                             <h3 class="font-bold mb-4 text-lg">Vessel Status</h3>
+                             <div class="space-y-3">
+                                 <label class="flex items-center text-base"><div class="w-5 h-5 border-4 border-yellow-400 rounded-sm mr-3"></div>On Working</label>
+                                 <label class="flex items-center text-base"><div class="w-5 h-5 border-4 border-red-500 rounded-sm mr-3"></div>Non Working</label>
+                             </div>
+                         </div>
+                     </div>
+                     <div class="border-t border-gray-200"></div>
+                     <div>
+                         <h2 id="vessel-name-display" class="text-xl font-bold text-gray-800 break-all">-</h2>
+                         <div class="mt-2">
+                             <label for="unit-type" class="block text-base font-bold text-gray-700 mb-1">Unit Type</label>
+                             <select id="unit-type" name="unit-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-lg font-bold border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                                 <option>MT</option>
+                                 <option>M3</option>
+                                 <option>QTY</option>
+                             </select>
+                         </div>
+                     </div>
+ 
+                     <div id="discharging-section" class="space-y-3">
+                         </div>
+                     
+                     <div id="loading-section" class="space-y-3">
+                         </div>
+                 </div>
+             </div>
+         </main>
+     </div>
+ 
+     <script>
+     document.addEventListener('DOMContentLoaded', () => {
+ 
+         // --- DATA ---
+         function generateVesselData() {
+             const data = [];
+             const names = ["OCEANIC", "NEPTUNE", "TRITON", "POSEIDON", "ATLANTIS", "VOYAGER", "DISCOVERY", "PIONEER", "EXPLORER", "NAVIGATOR", "MARINER", "SEAFARER", "ISLANDER", "COASTER", "MERCHANT", "TRADER", "CARRIER", "CLIPPER", "NOMAD", "ROVER", "PATHFINDER", "VENTURER", "CRUSADER", "PILGRIM"];
+             const commodities = ["Electronics", "Apparel", "Grain", "Steel Coils", "Crude Oil", "LNG", "Vehicles", "Lumber", "Chemicals", "Produce"];
+             const opTypes = ['import', 'export', 'both'];
+             
+             const berths = [
+                 // Pier 1 - Left Side (5 berths)
+                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+1}`, x: 125, y: 105 + i * 85, width: 20, height: 80})),
+                 // Pier 1 - Right Side (5 berths)
+                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+6}`, x: 355, y: 105 + i * 85, width: 20, height: 80})),
+                 // Top Connecting Pier (5 berths)
+                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+11}`, x: 380 + i * 95, y: 75, width: 90, height: 20})),
+                 // Pier 2 - Left Side (5 berths)
+                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+16}`, x: 825, y: 105 + i * 85, width: 20, height: 80})),
+                 // Pier 2 - Right Side (4 berths)
+                 ...Array(4).fill(0).map((_, i) => ({berthNo: `B${i+21}`, x: 1055, y: 105 + i * 85, width: 20, height: 80})),
+             ];
+ 
+             let vesselIdCounter = 1;
+ 
+             for (let i = 0; i < 24; i++) {
+                 const opType = opTypes[(i + Math.floor(Math.random() * opTypes.length)) % opTypes.length];
+                 const status = (i % 4 === 0) ? 'non-working' : 'working';
+                 const hasDischarge = opType === 'import' || opType === 'both';
+                 const hasLoad = opType === 'export' || opType === 'both';
+                 const isDoubleBanked = i === 2 || i === 17; // TRITON 3, CLIPPER 18
+ 
+                 const mainVessel = {
+                     id: `vessel-${vesselIdCounter++}`,
+                     name: `${names[(i + Math.floor(Math.random() * names.length)) % names.length]} ${i+1}`,
+                     vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}`,
+                     atb: `15/07/2025 ${String(i).padStart(2, '0')}:00`,
+                     etd: `20/07/2025 ${String(i).padStart(2, '0')}:00`,
+                     berthNo: berths[i].berthNo,
+                     shipCallNo: `SC${1001+i}`,
+                     loa: 150 + (i * 10 % 150),
+                     mt: 20000 + (i * 5000),
+                     commodityGroup: 'Mixed',
+                     commodity: commodities[(i + Math.floor(Math.random() * commodities.length)) % commodities.length],
+                     doubleBanking: isDoubleBanked,
+                     status: status,
+                     operationType: opType,
+                     position: berths[i],
+                     data: {
+                         discharging: {
+                             total: { MT: hasDischarge ? 50000 : 0, M3: hasDischarge ? 32000 : 0, QTY: hasDischarge ? 2000 : 0 },
+                             warehouse: { MT: { current: hasDischarge ? 5000 : 0, total: 15000 }, M3: { current: 3200, total: 9600 }, QTY: { current: 200, total: 600 } },
+                             truck: { MT: { current: hasDischarge ? 7500 : 0, total: 10000 }, M3: { current: 4800, total: 6400 }, QTY: { current: 300, total: 400 } },
+                             barge: { MT: { current: hasDischarge && isDoubleBanked ? 12500 : 0, total: 25000 }, M3: { current: 8000, total: 16000 }, QTY: { current: 500, total: 1000 } }
+                         },
+                         loading: {
+                             total: { MT: hasLoad ? 40000 : 0, M3: hasLoad ? 24000 : 0, QTY: hasLoad ? 1800 : 0 },
+                             warehouse: { MT: { current: hasLoad ? 10000 : 0, total: 15000 }, M3: { current: 6000, total: 9000 }, QTY: { current: 500, total: 700 } },
+                             truck: { MT: { current: hasLoad ? 15000 : 0, total: 20000 }, M3: { current: 9000, total: 12000 }, QTY: { current: 700, total: 900 } },
+                             barge: { MT: { current: 0, total: 5000 }, M3: { current: 0, total: 3000 }, QTY: { current: 0, total: 200 } }
+                         }
+                     }
+                 };
+                 data.push(mainVessel);
+ 
+                 if (isDoubleBanked) {
+                     const bargePos = {...mainVessel.position};
+                     // If vessel is on the left side of a pier (B1-5, B16-20), barge is on its left.
+                     // Otherwise, it's on the right side of a pier (B6-10, B21-24), so barge is on its right.
+                     if (mainVessel.position.x === 125 || mainVessel.position.x === 825) {
+                         bargePos.x -= 25;
+                     } else {
+                         bargePos.x += 25;
+                     }
+                     bargePos.height *= 0.8;
+                     bargePos.width *= 0.8;
+ 
+                     data.push({
+                         id: `vessel-${vesselIdCounter++}`,
+                         name: `${names[(i + Math.floor(Math.random() * names.length)) % names.length]} BARGE`,
+                         vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}-B`,
+                         atb: mainVessel.atb, etd: mainVessel.etd, berthNo: `${mainVessel.berthNo} (DB)`,
+                         shipCallNo: `SC${1001+i}-B`, loa: 80, mt: 10000,
+                         commodityGroup: mainVessel.commodityGroup, commodity: mainVessel.commodity,
+                         doubleBanking: false, status: 'working', operationType: 'export',
+                         position: bargePos,
+                         data: {
+                             discharging: { total: { MT: 0, M3: 0, QTY: 0 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } } },
+                             loading: { total: { MT: 25000, M3: 16000, QTY: 1000 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 12500, total: 25000 }, M3: { current: 8000, total: 16000 }, QTY: { current: 500, total: 1000 } } }
+                         }
+                     });
+                 }
+             }
+             return data;
+         }
+         
+         let vesselData = generateVesselData();
+         let currentVessel = null;
+ 
+         // --- DOM ELEMENTS ---
+         const svgContainer = document.getElementById('svg-container');
+         const berthSvg = document.getElementById('berth-svg');
+         const vesselContainer = document.getElementById('vessel-container-svg');
+         const truckContainer = document.getElementById('truck-container-svg');
+         const roadLanesContainer = document.getElementById('road-lanes-container');
+         const berthLabelsContainer = document.getElementById('berth-labels-container');
+         const bittContainer = document.getElementById('bitt-container-svg');
+         const vesselNameDisplay = document.getElementById('vessel-name-display');
+         const unitTypeSelect = document.getElementById('unit-type');
+         const dischargingSection = document.getElementById('discharging-section');
+         const loadingSection = document.getElementById('loading-section');
+         const vesselTableBody = document.getElementById('vessel-table-body');
+         const tooltip = document.getElementById('tooltip');
+         const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+         const leftColumn = document.getElementById('left-column');
+         const rightSidebar = document.getElementById('right-sidebar');
+         const toggleIcon = document.getElementById('toggle-icon');
+         const refreshButton = document.getElementById('refresh-button');
+         const fullscreenModal = document.getElementById('fullscreen-modal');
+         const fullscreenContent = document.getElementById('fullscreen-content');
+         const closeFullscreenBtn = document.getElementById('close-fullscreen');
+         
+         // --- FUNCTIONS ---
+ 
+         function getOperationColor(operationType) {
+             switch (operationType) {
+                 case 'import': return '#48bb78'; // green-500
+                 case 'export': return '#4299e1'; // blue-500
+                 case 'both': return '#9f7aea'; // purple-500
+                 default: return '#a0aec0'; // gray-500
+             }
+         }
+         
+         function getStatusColor(status) {
+              return status === 'working' ? '#ecc94b' : '#f56565'; // yellow-400 or red-500
+         }
+ 
+         function renderVessels() {
+             vesselContainer.innerHTML = vesselData.map(vessel => {
+                 const fillColor = getOperationColor(vessel.operationType);
+                 const strokeColor = getStatusColor(vessel.status);
+                 const isVertical = vessel.position.width < vessel.position.height;
+                 const textRotation = isVertical ? -90 : 0;
+                 const textX = vessel.position.width / 2;
+                 const textY = vessel.position.height / 2;
+                 const pos = vessel.position;
+                 
+                 let craneHTML = '';
+                 if (!vessel.berthNo.includes('(DB)')) {
+                     const isWorking = vessel.status === 'working';
+                     let craneX, craneY, armLength, armHeight, trolleyWidth, trolleyHeight, hookPath;
+                     let trolleyAnimation = '';
+ 
+                     // Crane positioning logic
+                     if (pos.y < 100) { // Top Pier (B11-B15)
+                         craneX = pos.x + pos.width / 2 - 25;
+                         craneY = pos.y + pos.height; // Positioned on the pier (land side)
+                         armLength = 50; armHeight = 30; trolleyWidth = 5; trolleyHeight = 10;
+                         hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
+                         if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; ${armLength - trolleyWidth} 0; 0 0" dur="5s" repeatCount="indefinite" />`;
+                     } else { // Side Piers
+                         armLength = 30; armHeight = 50; trolleyWidth = 10; trolleyHeight = 5;
+                         hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
+                         if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; 0 ${armHeight - trolleyHeight}; 0 0" dur="5s" repeatCount="indefinite" />`;
+                         craneY = pos.y + pos.height / 2 - 25;
+ 
+                         if (pos.x < 200) { // Pier 1 Left (B1-B5) - Crane on right (land)
+                             craneX = pos.x + pos.width;
+                         } else if (pos.x < 500) { // Pier 1 Right (B6-B10) - Crane on left (land)
+                             craneX = pos.x - armLength;
+                         } else if (pos.x < 900) { // Pier 2 Left (B16-B20) - Crane on right (land)
+                             craneX = pos.x + pos.width;
+                         } else { // Pier 2 Right (B21-B24) - Crane on left (land)
+                             craneX = pos.x - armLength;
+                         }
+                     }
+                     
+                     craneHTML = `
+                         <g class="crane" transform="translate(${craneX}, ${craneY})">
+                             <rect width="${armLength}" height="${armHeight}" fill="#4a5568" opacity="0.9" />
+                             <g class="crane-trolley">
+                                 ${trolleyAnimation}
+                                 <rect width="${trolleyWidth}" height="${trolleyHeight}" fill="#1f2937" />
+                                 <path d="${hookPath}" stroke="#111827" stroke-width="2" />
+                             </g>
+                         </g>
+                     `;
+                 }
+ 
+                 return `
+                     <g>
+                         <g class="vessel-bar-svg" data-vessel-id="${vessel.id}" transform="translate(${pos.x}, ${pos.y})">
+                             <rect 
+                                 width="${pos.width}" 
+                                 height="${pos.height}"
+                                 fill="${fillColor}"
+                                 stroke="${strokeColor}"
+                                 rx="3"
+                                 stroke-width="4" />
+                             <text x="${textX}" y="${textY}" 
+                                 fill="white" font-size="10" font-weight="bold" 
+                                 text-anchor="middle" dominant-baseline="middle"
+                                 transform="rotate(${textRotation}, ${textX}, ${textY})"
+                                 style="pointer-events: none;">
+                                 ${vessel.name}
+                             </text>
+                         </g>
+                         ${craneHTML}
+                     </g>
+                 `;
+             }).join('');
+         }
+         
+         function renderBerthLabels() {
+             const uniqueBerths = [...new Map(vesselData.filter(v => !v.berthNo.includes('(DB)')).map(v => [v.berthNo, v])).values()];
+             berthLabelsContainer.innerHTML = uniqueBerths.map(vessel => {
+                 const pos = vessel.position;
+                 let x, y, rotation = 0;
+ 
+                 // Check for Top Pier first based on Y coordinate to prevent mis-categorization
+                 if (pos.y < 100) { // Top Pier (B11-B15)
+                     x = pos.x + pos.width / 2;
+                     y = pos.y - 15; // Position label above the pier
+                     rotation = 0;
+                 } else if (pos.x < 200) { // Pier 1 Left (B1-B5)
+                     x = pos.x - 15;
+                     y = pos.y + pos.height / 2;
+                     rotation = -90;
+                 } else if (pos.x < 500) { // Pier 1 Right (B6-B10)
+                     x = pos.x + pos.width + 15;
+                     y = pos.y + pos.height / 2;
+                     rotation = 90;
+                 } else if (pos.x < 900) { // Pier 2 Left (B16-B20)
+                     x = pos.x - 15;
+                     y = pos.y + pos.height / 2;
+                     rotation = -90;
+                 } else { // Pier 2 Right (B21-B24)
+                     x = pos.x + pos.width + 15;
+                     y = pos.y + pos.height / 2;
+                     rotation = 90;
+                 }
+                 return `<text x="${x}" y="${y}" class="berth-label" transform="rotate(${rotation}, ${x}, ${y})">${vessel.berthNo}</text>`;
+             }).join('');
+         }
+ 
+ 
+         function renderBitts() {
+             const bittSpacing = 20; // Denser bitts
+             let bittHTML = '';
+             const pierEdges = [
+                 { start: { x: 150, y: 100 }, end: { x: 150, y: 550 } }, // Pier 1 Left
+                 { start: { x: 350, y: 100 }, end: { x: 350, y: 550 } }, // Pier 1 Right
+                 { start: { x: 350, y: 100 }, end: { x: 850, y: 100 } }, // Top Pier
+                 { start: { x: 850, y: 100 }, end: { x: 850, y: 550 } }, // Pier 2 Left
+                 { start: { x: 1050, y: 100 }, end: { x: 1050, y: 550 } },// Pier 2 Right
+             ];
+ 
+             pierEdges.forEach(edge => {
+                 const dx = edge.end.x - edge.start.x;
+                 const dy = edge.end.y - edge.start.y;
+                 const length = Math.sqrt(dx*dx + dy*dy);
+                 const numBitts = Math.floor(length / bittSpacing);
+                 
+                 for (let i = 1; i <= numBitts; i++) {
+                     const x = edge.start.x + (dx / length) * (i * bittSpacing);
+                     const y = edge.start.y + (dy / length) * (i * bittSpacing);
+                     bittHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#ef4444" />`; // Red bitts
+                 }
+             });
+             bittContainer.innerHTML = bittHTML;
+         }
+         
+         function renderRoadLanes() {
+             let lanesHTML = '';
+             const lineSpacing = 25;
+             const stroke = 'stroke="#f59e0b" stroke-width="2"';
+ 
+             // Pier 1 parking lanes
+             for (let x = 170; x < 350; x += lineSpacing) {
+                 lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
+             }
+             // Pier 2 parking lanes
+             for (let x = 870; x < 1050; x += lineSpacing) {
+                 lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
+             }
+             // Top landside parking lanes
+             for (let y = 20; y < 80; y += lineSpacing) {
+                  lanesHTML += `<path d="M 150 ${y} L 1050 ${y}" ${stroke} />`;
+             }
+              // Main driving lanes (solid)
+             lanesHTML += `<path d="M 360 85 L 840 85" stroke="#f59e0b" stroke-width="3" />`; // Landside main
+             lanesHTML += `<path d="M 250 100 L 250 550" stroke="#f59e0b" stroke-width="3" />`; // Pier 1 main
+             lanesHTML += `<path d="M 950 100 L 950 550" stroke="#f59e0b" stroke-width="3" />`; // Pier 2 main
+ 
+             roadLanesContainer.innerHTML = lanesHTML;
+         }
+ 
+         function renderTrucks() {
+             let truckHTML = '';
+             const truckColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+             
+             const workingVessels = vesselData.filter(v => v.status === 'working' && !v.berthNo.includes('(DB)'));
+             if (workingVessels.length === 0) {
+                 truckContainer.innerHTML = '';
+                 return; // No trucks if no vessels are working
+             }
+ 
+             const numTrucks = 25; // Increased truck count
+             for(let i=0; i < numTrucks; i++) {
+                 const targetVessel = workingVessels[i % workingVessels.length];
+                 const onPier1 = targetVessel.position.x < 500;
+                 const onTopPier = targetVessel.position.y < 100;
+                 
+                 // Define start, corner, parking and crane coordinates
+                 const startX = 400 + Math.random() * 400;
+                 const startY = 85;
+                 
+                 let pierRoadX, targetY, parkingX, parkingY;
+ 
+                 if (onTopPier) {
+                     pierRoadX = targetVessel.position.x + targetVessel.position.width / 2;
+                     targetY = startY;
+                     parkingX = pierRoadX;
+                     parkingY = targetVessel.position.y + targetVessel.position.height + 20; // Park below crane
+                 } else { // On Pier 1 or 2
+                     pierRoadX = onPier1 ? 250 : 950;
+                     targetY = targetVessel.position.y + targetVessel.position.height / 2;
+                     parkingY = targetY;
+                     // Park next to the pier road, closer to the vessel
+                     parkingX = onPier1 ? pierRoadX + 25 : pierRoadX - 25; 
+                 }
+ 
+                 const pathToParking = `M ${startX},${startY} L ${pierRoadX},${startY} L ${pierRoadX},${targetY} L ${parkingX},${parkingY}`;
+                 const pathFromParking = `M ${parkingX},${parkingY} L ${pierRoadX},${targetY} L ${pierRoadX},${startY} L ${startX},${startY}`;
+                 
+                 const fullPath = `${pathToParking} ${pathFromParking.substring(1)}`; // Combine paths
+ 
+                 // Use keyPoints to create the pause. The path to parking is the first half of the animation.
+                 const keyPoints = "0; 0.5; 0.5; 1"; 
+                 const totalDuration = 15 + Math.random() * 8; // 15-23 seconds for a round trip
+                 const pauseDuration = 2;
+                 
+                 // Adjust keyTimes to insert the pause correctly
+                 const travelDuration = totalDuration - pauseDuration;
+                 const timeToPause = travelDuration / 2;
+                 const timeAfterPause = timeToPause + pauseDuration;
+                 const keyTimes = `0; ${timeToPause / totalDuration}; ${timeAfterPause / totalDuration}; 1`;
+ 
+                 truckHTML += `
+                     <g>
+                         <g>
+                              <animateMotion 
+                                  dur="${totalDuration}s" 
+                                  begin="${i * 1.5}s" 
+                                  repeatCount="indefinite" 
+                                  rotate="auto"
+                                  path="${fullPath}"
+                                  keyTimes="${keyTimes}"
+                                  keyPoints="${keyPoints}"
+                                  calcMode="linear"
+                                  />
+                             <!-- Truck Body -->
+                             <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
+                             <!-- Truck Cab -->
+                             <rect x="4" y="-5" width="8" height="10" fill="#6b7280" rx="1" />
+                         </g>
+                     </g>
+                 `;
+             }
+             truckContainer.innerHTML = truckHTML;
+         }
+         
+         function renderTable() {
+             vesselTableBody.innerHTML = vesselData.map(vessel => {
+                 const isChecked = vessel.doubleBanking ? 'checked' : '';
+                 const rowClass = vessel.status === 'working' ? 'hover:bg-gray-50' : 'bg-red-50 hover:bg-red-100';
+                 return `
+                     <tr data-vescallid="${vessel.vesCallId}" class="border-b ${rowClass}">
+                         <td class="p-3">${vessel.vesCallId}</td>
+                         <td class="p-3">${vessel.name}</td>
+                         <td class="p-3">${vessel.berthNo}</td>
+                         <td class="p-3">${vessel.shipCallNo}</td>
+                         <td class="p-3">${vessel.loa}</td>
+                         <td class="p-3">${vessel.atb}</td>
+                         <td class="p-3">${vessel.etd}</td>
+                         <td class="p-3">${vessel.mt}</td>
+                         <td class="p-3">${vessel.commodityGroup}</td>
+                         <td class="p-3">${vessel.commodity}</td>
+                         <td class="p-3 text-center"><input type="checkbox" ${isChecked} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" disabled></td>
+                     </tr>
+                 `;
+             }).join('');
+         }
+         
+         function updateSidebar(vessel) {
+             currentVessel = vessel;
+             vesselNameDisplay.innerHTML = `<span class="font-bold">${vessel.name}</span> <span class="text-gray-500 font-normal">/ ${vessel.vesCallId}</span>`;
+             
+             document.querySelectorAll('.vessel-bar-svg').forEach(bar => bar.classList.remove('selected-svg'));
+             document.querySelector(`[data-vessel-id='${vessel.id}']`).classList.add('selected-svg');
+ 
+             vesselTableBody.querySelectorAll('tr').forEach(row => row.classList.remove('selected-row'));
+             const tableRow = vesselTableBody.querySelector(`tr[data-vescallid="${vessel.vesCallId}"]`);
+             if (tableRow) {
+                 tableRow.classList.add('selected-row');
+             }
+ 
              updateProgressBars();
-        });
-        
-        toggleSidebarBtn.addEventListener('click', () => {
-            rightSidebar.classList.toggle('hidden');
-            leftColumn.classList.toggle('lg:col-span-2');
-            leftColumn.classList.toggle('lg:col-span-3');
-            
-            const isHidden = rightSidebar.classList.contains('hidden');
-            toggleIcon.innerHTML = isHidden ? 
-                 `<path fill-rule="evenodd" d="M10.354 1.646a.5.5 0 0 1 0 .708L4.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
-                  <path fill-rule="evenodd" d="M6.354 1.646a.5.5 0 0 1 0 .708L.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>` :
-                 `<path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
-                  <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>`;
-        });
-
-        refreshButton.addEventListener('click', () => {
-            const refreshIcon = refreshButton.querySelector('svg');
-            refreshIcon.classList.add('animate-spin');
-            
-            setTimeout(() => {
-                vesselData = generateVesselData(); // Generate new random data
-                fullRender();
-                refreshIcon.classList.remove('animate-spin');
-            }, 500);
-        });
-        
-        svgContainer.addEventListener('dblclick', () => {
-            const clonedSvg = berthSvg.cloneNode(true);
-            // Re-attach event listeners to the cloned SVG's vessels if needed for interactivity in fullscreen
-            const newVesselElements = clonedSvg.querySelectorAll('.vessel-bar-svg');
-            newVesselElements.forEach(el => {
-                el.addEventListener('click', (e) => {
-                    const vesselId = el.dataset.vesselId;
-                    const selectedVessel = vesselData.find(v => v.id === vesselId);
-                    if(selectedVessel) {
-                        // Maybe show a modal with vessel info or just log it
-                        console.log("Clicked in fullscreen:", selectedVessel.name);
-                    }
-                    e.stopPropagation(); // Prevent dblclick from firing again
-                });
-            });
-
-            // The close button is now part of the static HTML, we just need to handle its clone
-            const closeBtnClone = closeFullscreenBtn.cloneNode(true);
-            closeBtnClone.id = 'fullscreen-close-clone';
-            closeBtnClone.addEventListener('click', () => {
-                fullscreenModal.classList.add('hidden');
-                fullscreenModal.classList.remove('flex');
-                fullscreenContent.innerHTML = ''; // Clear content to prevent ID conflicts
-            });
-
-            fullscreenContent.innerHTML = ''; // Clear previous content
-            fullscreenContent.appendChild(clonedSvg);
-            fullscreenContent.appendChild(closeBtnClone);
-            
-            fullscreenModal.classList.remove('hidden');
-            fullscreenModal.classList.add('flex');
-        });
-
-        closeFullscreenBtn.addEventListener('click', () => {
-            fullscreenModal.classList.add('hidden');
-            fullscreenModal.classList.remove('flex');
-        });
-
-        // --- INITIALIZATION ---
-        fullRender();
-    });
-    </script>
-</body>
-</html>
+         }
+ 
+         function createProgressHTML(title, data, unit, colorClass = 'bg-blue-500') {
+             const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
+             return `
+                 <div class="border border-gray-300 rounded-lg p-3 ml-4">
+                     <p class="text-gray-600">${title}: ${data.current.toFixed(2)} / ${data.total.toFixed(2)} (${unit}) ${percentage.toFixed(2)}%</p>
+                     <div class="progress-bar-container mt-1"><div class="progress-bar ${colorClass}" style="width: ${percentage}%;"></div></div>
+                 </div>
+             `;
+         }
+ 
+         function updateProgressBars() {
+             if (!currentVessel) {
+                 dischargingSection.innerHTML = '';
+                 loadingSection.innerHTML = '';
+                 return;
+             }
+ 
+             const unit = unitTypeSelect.value;
+             
+             const discharge = currentVessel.data.discharging;
+             const totalDischargeCurrent = discharge.warehouse[unit].current + discharge.truck[unit].current + discharge.barge[unit].current;
+             const totalDischarge = discharge.total[unit];
+             
+             if (totalDischarge > 0) {
+                  const dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
+                  let dischargingHTML = `
+                       <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
+                           <h4 class="font-bold text-blue-800">Discharging</h4>
+                           <p class="font-semibold text-gray-600">Total: ${totalDischargeCurrent.toFixed(2)} / ${totalDischarge.toFixed(2)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
+                           <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
+                       </div>
+                 `;
+                 dischargingHTML += createProgressHTML('To Warehouse', discharge.warehouse[unit], unit);
+                 dischargingHTML += createProgressHTML('Direct by Truck', discharge.truck[unit], unit);
+                 dischargingHTML += createProgressHTML('Direct by Barge', discharge.barge[unit], unit);
+                 dischargingSection.innerHTML = dischargingHTML;
+             } else {
+                 dischargingSection.innerHTML = '';
+             }
+ 
+ 
+             const loading = currentVessel.data.loading;
+             const totalLoadingCurrent = loading.warehouse[unit].current + loading.truck[unit].current + loading.barge[unit].current;
+             const totalLoading = loading.total[unit];
+ 
+             if (totalLoading > 0) {
+                 const loadingPercentage = (totalLoadingCurrent / totalLoading) * 100;
+                 let loadingHTML = `
+                      <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
+                          <h4 class="font-bold text-yellow-800">Loading</h4>
+                          <p class="font-semibold text-gray-600">Total: ${totalLoadingCurrent.toFixed(2)} / ${totalLoading.toFixed(2)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
+                          <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
+                      </div>
+                 `;
+                 loadingHTML += createProgressHTML('From Warehouse', loading.warehouse[unit], unit, 'bg-yellow-500');
+                 loadingHTML += createProgressHTML('Direct by Truck', loading.truck[unit], unit, 'bg-yellow-500');
+                 loadingHTML += createProgressHTML('Direct by Barge', loading.barge[unit], unit, 'bg-yellow-500');
+                 loadingSection.innerHTML = loadingHTML;
+             } else {
+                 loadingSection.innerHTML = '';
+             }
+         }
+         
+         function fullRender() {
+             renderRoadLanes();
+             renderVessels();
+             renderTable();
+             renderBerthLabels();
+             renderBitts();
+             renderTrucks();
+             if (vesselData.length > 0) {
+                 const reselectedVessel = vesselData.find(v => v.id === (currentVessel ? currentVessel.id : null)) || vesselData[0];
+                 updateSidebar(reselectedVessel);
+             }
+         }
+ 
+         // --- EVENT LISTENERS ---
+ 
+         vesselContainer.addEventListener('click', (e) => {
+             const vesselEl = e.target.closest('[data-vessel-id]');
+             if (vesselEl) {
+                 const vesselId = vesselEl.dataset.vesselId;
+                 const selectedVesselData = vesselData.find(v => v.id === vesselId);
+                 if (selectedVesselData) {
+                     updateSidebar(selectedVesselData);
+                 }
+             }
+         });
+ 
+         vesselContainer.addEventListener('mouseover', (e) => {
+             const vesselEl = e.target.closest('[data-vessel-id]');
+             if (vesselEl) {
+                 const vesselId = vesselEl.dataset.vesselId;
+                 const vessel = vesselData.find(v => v.id === vesselId);
+                 if (vessel) {
+                     tooltip.innerHTML = `
+                         <div><strong>VesCallID:</strong> ${vessel.vesCallId}</div>
+                         <div><strong>ATB:</strong> ${vessel.atb}</div>
+                         <div><strong>ETD:</strong> ${vessel.etd}</div>
+                     `;
+                     tooltip.style.display = 'block';
+                 }
+             }
+         });
+ 
+         document.addEventListener('mousemove', (e) => {
+             tooltip.style.left = (e.clientX + 15) + 'px';
+             tooltip.style.top = (e.clientY + 15) + 'px';
+         });
+ 
+         vesselContainer.addEventListener('mouseout', () => {
+             tooltip.style.display = 'none';
+         });
+ 
+         unitTypeSelect.addEventListener('change', () => {
+              updateProgressBars();
+         });
+         
+         toggleSidebarBtn.addEventListener('click', () => {
+             rightSidebar.classList.toggle('hidden');
+             leftColumn.classList.toggle('lg:col-span-2');
+             leftColumn.classList.toggle('lg:col-span-3');
+             
+             const isHidden = rightSidebar.classList.contains('hidden');
+             toggleIcon.innerHTML = isHidden ? 
+                  `<path fill-rule="evenodd" d="M10.354 1.646a.5.5 0 0 1 0 .708L4.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                   <path fill-rule="evenodd" d="M6.354 1.646a.5.5 0 0 1 0 .708L.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>` :
+                  `<path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
+                   <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>`;
+         });
+ 
+         refreshButton.addEventListener('click', () => {
+             const refreshIcon = refreshButton.querySelector('svg');
+             refreshIcon.classList.add('animate-spin');
+             
+             setTimeout(() => {
+                 vesselData = generateVesselData(); // Generate new random data
+                 fullRender();
+                 refreshIcon.classList.remove('animate-spin');
+             }, 500);
+         });
+         
+         svgContainer.addEventListener('dblclick', () => {
+             const clonedSvg = berthSvg.cloneNode(true);
+             // Re-attach event listeners to the cloned SVG's vessels if needed for interactivity in fullscreen
+             const newVesselElements = clonedSvg.querySelectorAll('.vessel-bar-svg');
+             newVesselElements.forEach(el => {
+                 el.addEventListener('click', (e) => {
+                     const vesselId = el.dataset.vesselId;
+                     const selectedVessel = vesselData.find(v => v.id === vesselId);
+                     if(selectedVessel) {
+                         // Maybe show a modal with vessel info or just log it
+                         console.log("Clicked in fullscreen:", selectedVessel.name);
+                     }
+                     e.stopPropagation(); // Prevent dblclick from firing again
+                 });
+             });
+ 
+             // The close button is now part of the static HTML, we just need to handle its clone
+             const closeBtnClone = closeFullscreenBtn.cloneNode(true);
+             closeBtnClone.id = 'fullscreen-close-clone';
+             closeBtnClone.addEventListener('click', () => {
+                 fullscreenModal.classList.add('hidden');
+                 fullscreenModal.classList.remove('flex');
+                 fullscreenContent.innerHTML = ''; // Clear content to prevent ID conflicts
+             });
+ 
+             fullscreenContent.innerHTML = ''; // Clear previous content
+             fullscreenContent.appendChild(clonedSvg);
+             fullscreenContent.appendChild(closeBtnClone);
+             
+             fullscreenModal.classList.remove('hidden');
+             fullscreenModal.classList.add('flex');
+         });
+ 
+         closeFullscreenBtn.addEventListener('click', () => {
+             fullscreenModal.classList.add('hidden');
+             fullscreenModal.classList.remove('flex');
+         });
+ 
+         // --- INITIALIZATION ---
+         fullRender();
+     });
+     </script>
+ </body>
+ </html>
