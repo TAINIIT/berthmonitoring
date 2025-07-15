@@ -57,7 +57,7 @@
              padding: 8px 12px;
              border-radius: 6px;
              font-size: 0.875rem;
-             z-index: 100;
+             z-index: 1000; /* Ensure tooltip is above everything */
              pointer-events: none; /* So it doesn't interfere with mouse events */
          }
          .berth-label {
@@ -75,13 +75,31 @@
          .crane-trolley-working-v {
              animation: move-trolley-v 6s ease-in-out infinite;
          }
+         /* Progress bar animation */
+         @keyframes progress-animation {
+            from { width: 0%; }
+            to { width: 100%; }
+         }
+        .progress-bar-animated {
+            animation: progress-animation 1s linear forwards;
+        }
      </style>
  </head>
  <body class="text-gray-800 text-sm">
  
      <div id="tooltip"></div>
  
-     <div id="fullscreen-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-50">
+     <!-- Progress Bar Overlay -->
+     <div id="progress-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+            <div class="text-lg font-semibold mb-3">In Progressing...</div>
+            <div class="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div id="progress-bar-inner" class="h-full bg-blue-500 rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+     <div id="fullscreen-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-40">
          <div id="fullscreen-content" class="w-full h-full bg-white rounded-lg p-2 relative">
               <button id="close-fullscreen" class="absolute top-2 right-2 text-gray-800 bg-white rounded-full p-2 z-10 hover:bg-gray-200">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
@@ -158,7 +176,7 @@
                          <table class="w-full text-left">
                              <thead class="bg-gray-50 sticky top-0">
                                  <tr>
-                                     <th class="p-3 font-semibold">Vessel Call ID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
+                                     <th class="p-3 font-semibold">VesCallID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
                                  </tr>
                              </thead>
                              <tbody id="vessel-table-body">
@@ -343,6 +361,8 @@
          const fullscreenContent = document.getElementById('fullscreen-content');
          const closeFullscreenBtn = document.getElementById('close-fullscreen');
          const dateTimeInput = document.getElementById('current-datetime');
+         const progressOverlay = document.getElementById('progress-overlay');
+         const progressBarInner = document.getElementById('progress-bar-inner');
 
          // --- FUNCTIONS ---
  
@@ -522,93 +542,119 @@
          }
          
          function renderRoadLanes() {
-             let lanesHTML = '';
-             const lineSpacing = 25;
-             const stroke = 'stroke="#f59e0b" stroke-width="2"';
- 
-             for (let x = 170; x < 350; x += lineSpacing) {
-                 lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
-             }
-             for (let x = 870; x < 1050; x += lineSpacing) {
-                 lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
-             }
-             for (let y = 20; y < 80; y += lineSpacing) {
-                  lanesHTML += `<path d="M 150 ${y} L 1050 ${y}" ${stroke} />`;
-             }
-             lanesHTML += `<path d="M 360 85 L 840 85" stroke="#f59e0b" stroke-width="3" />`;
-             lanesHTML += `<path d="M 250 100 L 250 550" stroke="#f59e0b" stroke-width="3" />`;
-             lanesHTML += `<path d="M 950 100 L 950 550" stroke="#f59e0b" stroke-width="3" />`;
- 
-             roadLanesContainer.innerHTML = lanesHTML;
-         }
+            let lanesHTML = '';
+            const lineSpacing = 25;
+            const stroke = 'stroke="#f59e0b" stroke-width="2" stroke-dasharray="10 5"'; // Dashed line
+
+            // Main horizontal roads
+            lanesHTML += `<path d="M 0 60 L 1200 60" ${stroke} />`; // Outgoing lane
+            lanesHTML += `<path d="M 0 85 L 1200 85" ${stroke} />`; // Incoming lane
+
+            // Pier 1 roads
+            lanesHTML += `<path d="M 240 100 L 240 550" ${stroke} />`; // Outgoing lane
+            lanesHTML += `<path d="M 265 100 L 265 550" ${stroke} />`; // Incoming lane
+
+            // Pier 2 roads
+            lanesHTML += `<path d="M 940 100 L 940 550" ${stroke} />`; // Outgoing lane
+            lanesHTML += `<path d="M 965 100 L 965 550" ${stroke} />`; // Incoming lane
+
+            roadLanesContainer.innerHTML = lanesHTML;
+        }
  
          function renderTrucks() {
-             let truckHTML = '';
-             const truckColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-             
-             const workingVessels = vesselData.filter(v => v.status === 'working' && !v.berthNo.includes('(DB)'));
-             if (workingVessels.length === 0) {
-                 truckContainer.innerHTML = '';
-                 return;
-             }
- 
-             const numTrucks = 25;
-             for(let i=0; i < numTrucks; i++) {
-                 const targetVessel = workingVessels[i % workingVessels.length];
-                 const onPier1 = targetVessel.position.x < 500;
-                 const onTopPier = targetVessel.position.y < 100;
-                 
-                 const startX = 400 + Math.random() * 400;
-                 const startY = 85;
-                 
-                 let pierRoadX, targetY, parkingX, parkingY;
- 
-                 if (onTopPier) {
-                     pierRoadX = targetVessel.position.x + targetVessel.position.width / 2;
-                     targetY = startY;
-                     parkingX = pierRoadX;
-                     parkingY = targetVessel.position.y + targetVessel.position.height + 20;
-                 } else {
-                     pierRoadX = onPier1 ? 250 : 950;
-                     targetY = targetVessel.position.y + targetVessel.position.height / 2;
-                     parkingY = targetY;
-                     parkingX = onPier1 ? pierRoadX + 25 : pierRoadX - 25; 
-                 }
- 
-                 const pathToParking = `M ${startX},${startY} L ${pierRoadX},${startY} L ${pierRoadX},${targetY} L ${parkingX},${parkingY}`;
-                 const pathFromParking = `M ${parkingX},${parkingY} L ${pierRoadX},${targetY} L ${pierRoadX},${startY} L ${startX},${startY}`;
-                 const fullPath = `${pathToParking} ${pathFromParking.substring(1)}`;
- 
-                 const keyPoints = "0; 0.5; 0.5; 1"; 
-                 const totalDuration = 15 + Math.random() * 8;
-                 const pauseDuration = 2;
-                 
-                 const travelDuration = totalDuration - pauseDuration;
-                 const timeToPause = travelDuration / 2;
-                 const timeAfterPause = timeToPause + pauseDuration;
-                 const keyTimes = `0; ${timeToPause / totalDuration}; ${timeAfterPause / totalDuration}; 1`;
- 
-                 truckHTML += `
-                     <g>
-                         <g>
-                              <animateMotion 
-                                  dur="${totalDuration}s" 
-                                  begin="${i * 1.5}s" 
-                                  repeatCount="indefinite" 
-                                  rotate="auto"
-                                  path="${fullPath}"
-                                  keyTimes="${keyTimes}"
-                                  keyPoints="${keyPoints}"
-                                  calcMode="linear"
-                                  />
-                             <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
-                             <rect x="4" y="-5" width="8" height="10" fill="#6b7280" rx="1" />
-                         </g>
-                     </g>
-                 `;
-             }
-             truckContainer.innerHTML = truckHTML;
-         }
+            let truckHTML = '';
+            const truckColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+            
+            const workingVessels = vesselData.filter(v => v.status === 'working' && !v.berthNo.includes('(DB)'));
+            if (workingVessels.length === 0) {
+                truckContainer.innerHTML = '';
+                return;
+            }
+
+            const numTrucks = 25;
+            for(let i=0; i < numTrucks; i++) {
+                const targetVessel = workingVessels[i % workingVessels.length];
+                const onPier1 = targetVessel.position.x < 500;
+                const onTopPier = targetVessel.position.y < 100;
+                
+                // Define lanes
+                const mainInLaneY = 85;
+                const mainOutLaneY = 60;
+                const pier1InLaneX = 265;
+                const pier1OutLaneX = 240;
+                const pier2InLaneX = 965;
+                const pier2OutLaneX = 940;
+
+                const startX = 400 + Math.random() * 400;
+                
+                let inLaneX, outLaneX, parkingX, parkingY, cornerInX, cornerOutX, cornerY;
+
+                if (onTopPier) {
+                    cornerInX = targetVessel.position.x + targetVessel.position.width / 2;
+                    cornerOutX = cornerInX;
+                    cornerY = mainInLaneY;
+                    parkingX = cornerInX;
+                    parkingY = targetVessel.position.y + targetVessel.position.height + 20;
+                } else { // On Pier 1 or 2
+                    cornerY = 100;
+                    if (onPier1) {
+                        inLaneX = pier1InLaneX;
+                        outLaneX = pier1OutLaneX;
+                        cornerInX = pier1InLaneX;
+                        cornerOutX = pier1OutLaneX;
+                        parkingX = inLaneX + 25;
+                    } else {
+                        inLaneX = pier2InLaneX;
+                        outLaneX = pier2OutLaneX;
+                        cornerInX = pier2InLaneX;
+                        cornerOutX = pier2OutLaneX;
+                        parkingX = inLaneX - 25;
+                    }
+                    parkingY = targetVessel.position.y + targetVessel.position.height / 2;
+                }
+
+                // Path to parking (using "in" lanes)
+                const pathToParking = onTopPier ? 
+                    `M ${startX},${mainInLaneY} L ${cornerInX},${mainInLaneY} L ${parkingX},${parkingY}` :
+                    `M ${startX},${mainInLaneY} L ${cornerInX},${mainInLaneY} L ${inLaneX},${cornerY} L ${inLaneX},${parkingY} L ${parkingX},${parkingY}`;
+
+                // Path from parking (using "out" lanes)
+                const pathFromParking = onTopPier ?
+                    `M ${parkingX},${parkingY} L ${cornerOutX},${mainOutLaneY} L ${startX},${mainOutLaneY}` :
+                    `M ${parkingX},${parkingY} L ${outLaneX},${parkingY} L ${outLaneX},${cornerY} L ${cornerOutX},${mainOutLaneY} L ${startX},${mainOutLaneY}`;
+
+                const fullPath = `${pathToParking} ${pathFromParking.substring(1)}`;
+
+                const keyPoints = "0; 0.5; 0.5; 1"; 
+                const totalDuration = 15 + Math.random() * 8;
+                const pauseDuration = 2;
+                
+                const travelDuration = totalDuration - pauseDuration;
+                const timeToPause = travelDuration / 2;
+                const timeAfterPause = timeToPause + pauseDuration;
+                const keyTimes = `0; ${timeToPause / totalDuration}; ${timeAfterPause / totalDuration}; 1`;
+
+                truckHTML += `
+                    <g>
+                        <g>
+                             <animateMotion 
+                                 dur="${totalDuration}s" 
+                                 begin="${i * 1.5}s" 
+                                 repeatCount="indefinite" 
+                                 rotate="auto"
+                                 path="${fullPath}"
+                                 keyTimes="${keyTimes}"
+                                 keyPoints="${keyPoints}"
+                                 calcMode="linear"
+                                 />
+                            <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
+                            <rect x="4" y="-5" width="8" height="10" fill="#6b7280" rx="1" />
+                        </g>
+                    </g>
+                `;
+            }
+            truckContainer.innerHTML = truckHTML;
+        }
          
          function renderTable() {
              vesselTableBody.innerHTML = vesselData.map(vessel => {
@@ -815,50 +861,67 @@
          });
  
          refreshButton.addEventListener('click', () => {
-             const refreshIcon = refreshButton.querySelector('svg');
-             refreshIcon.classList.add('animate-spin');
-             
-             setTimeout(() => {
-                 vesselData = generateVesselData(); 
-                 fullRender();
-                 updateDateTime();
-                 refreshIcon.classList.remove('animate-spin');
-             }, 500);
-         });
+            progressOverlay.classList.remove('hidden');
+            progressOverlay.classList.add('flex');
+            progressBarInner.style.width = '0%'; // Reset first
+            progressBarInner.classList.add('progress-bar-animated');
+
+            setTimeout(() => {
+                vesselData = generateVesselData(); 
+                fullRender();
+                updateDateTime();
+                
+                progressOverlay.classList.add('hidden');
+                progressOverlay.classList.remove('flex');
+                progressBarInner.classList.remove('progress-bar-animated');
+            }, 1000); // 1 second delay
+        });
          
          svgContainer.addEventListener('dblclick', () => {
-             const clonedSvg = berthSvg.cloneNode(true);
-             const newVesselElements = clonedSvg.querySelectorAll('.vessel-bar-svg');
-             newVesselElements.forEach(el => {
-                 el.addEventListener('click', (e) => {
-                     const vesselId = el.dataset.vesselId;
-                     const selectedVessel = vesselData.find(v => v.id === vesselId);
-                     if(selectedVessel) {
-                         console.log("Clicked in fullscreen:", selectedVessel.name);
-                     }
-                     e.stopPropagation();
-                 });
-             });
- 
-             const closeBtnClone = closeFullscreenBtn.cloneNode(true);
-             closeBtnClone.id = 'fullscreen-close-clone';
-             closeBtnClone.addEventListener('click', () => {
-                 fullscreenModal.classList.add('hidden');
-                 fullscreenModal.classList.remove('flex');
-                 fullscreenContent.innerHTML = '';
-             });
- 
-             fullscreenContent.innerHTML = '';
-             fullscreenContent.appendChild(clonedSvg);
-             fullscreenContent.appendChild(closeBtnClone);
-             
-             fullscreenModal.classList.remove('hidden');
-             fullscreenModal.classList.add('flex');
-         });
+            const clonedSvg = berthSvg.cloneNode(true);
+            fullscreenContent.innerHTML = ''; // Clear previous content
+
+            const newVesselElements = clonedSvg.querySelectorAll('.vessel-bar-svg');
+            newVesselElements.forEach(el => {
+                el.addEventListener('mouseover', (e) => {
+                    const vesselId = el.dataset.vesselId;
+                    const vessel = vesselData.find(v => v.id === vesselId);
+                    if (vessel) {
+                        tooltip.innerHTML = `
+                            <div class='font-bold text-base mb-1'>${vessel.name}</div>
+                            <div><strong>Type:</strong> ${vessel.vesselType || 'N/A'}</div>
+                            <div><strong>ATA:</strong> ${formatVesselDate(vessel.ata)}</div>
+                            <div><strong>ATB:</strong> ${formatVesselDate(vessel.atb)}</div>
+                            <div><strong>ETD:</strong> ${formatVesselDate(vessel.etd)}</div>
+                        `;
+                        tooltip.style.display = 'block';
+                    }
+                });
+                el.addEventListener('mouseout', () => {
+                    tooltip.style.display = 'none';
+                });
+            });
+
+            fullscreenContent.appendChild(clonedSvg);
+            
+            const closeBtnClone = closeFullscreenBtn.cloneNode(true);
+            closeBtnClone.id = 'fullscreen-close-clone';
+            closeBtnClone.addEventListener('click', () => {
+                fullscreenModal.classList.add('hidden');
+                fullscreenModal.classList.remove('flex');
+                fullscreenContent.innerHTML = '';
+                tooltip.style.display = 'none';
+            });
+            fullscreenContent.appendChild(closeBtnClone);
+            
+            fullscreenModal.classList.remove('hidden');
+            fullscreenModal.classList.add('flex');
+        });
  
          closeFullscreenBtn.addEventListener('click', () => {
              fullscreenModal.classList.add('hidden');
              fullscreenModal.classList.remove('flex');
+             tooltip.style.display = 'none';
          });
  
          // --- INITIALIZATION ---
