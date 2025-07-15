@@ -442,25 +442,45 @@
             }).join('');
         }
         
+        /**
+         * Renders the berth labels on the SVG layout.
+         * FIX: The logic was changed to check the Y-coordinate first to correctly identify
+         * the top pier berths (B11-B15). The original logic used an X-coordinate check
+         * that incorrectly categorized B11 and B12 as belonging to "Pier 1 Right",
+         * causing their labels to be misplaced.
+         */
         function renderBerthLabels() {
             const uniqueBerths = [...new Map(vesselData.filter(v => !v.berthNo.includes('(DB)')).map(v => [v.berthNo, v])).values()];
             berthLabelsContainer.innerHTML = uniqueBerths.map(vessel => {
                 const pos = vessel.position;
                 let x, y, rotation = 0;
-                if (pos.x < 200) { // Pier 1 Left
-                    x = pos.x - 15; y = pos.y + pos.height / 2; rotation = -90;
-                } else if (pos.x > 300 && pos.x < 500) { // Pier 1 Right
-                    x = pos.x + 35; y = pos.y + pos.height / 2; rotation = 90;
-                } else if (pos.x > 800 && pos.x < 900) { // Pier 2 Left
-                     x = pos.x - 15; y = pos.y + pos.height / 2; rotation = -90;
-                } else if (pos.x > 1000) { // Pier 2 Right
-                    x = pos.x + 35; y = pos.y + pos.height / 2; rotation = 90;
-                } else { // Top Pier
-                    x = pos.x + pos.width / 2; y = pos.y - 20; // Adjusted Y for visibility
+
+                // Check for Top Pier first based on Y coordinate to prevent mis-categorization
+                if (pos.y < 100) { // Top Pier (B11-B15)
+                    x = pos.x + pos.width / 2;
+                    y = pos.y - 15; // Position label above the pier
+                    rotation = 0;
+                } else if (pos.x < 200) { // Pier 1 Left (B1-B5)
+                    x = pos.x - 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = -90;
+                } else if (pos.x < 500) { // Pier 1 Right (B6-B10)
+                    x = pos.x + pos.width + 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = 90;
+                } else if (pos.x < 900) { // Pier 2 Left (B16-B20)
+                    x = pos.x - 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = -90;
+                } else { // Pier 2 Right (B21-B24)
+                    x = pos.x + pos.width + 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = 90;
                 }
                 return `<text x="${x}" y="${y}" class="berth-label" transform="rotate(${rotation}, ${x}, ${y})">${vessel.berthNo}</text>`;
             }).join('');
         }
+
 
         function renderBitts() {
             const bittSpacing = 20; // Denser bitts
@@ -568,15 +588,15 @@
                     <g>
                         <g>
                              <animateMotion 
-                                dur="${totalDuration}s" 
-                                begin="${i * 1.5}s" 
-                                repeatCount="indefinite" 
-                                rotate="auto"
-                                path="${fullPath}"
-                                keyTimes="${keyTimes}"
-                                keyPoints="${keyPoints}"
-                                calcMode="linear"
-                                />
+                                 dur="${totalDuration}s" 
+                                 begin="${i * 1.5}s" 
+                                 repeatCount="indefinite" 
+                                 rotate="auto"
+                                 path="${fullPath}"
+                                 keyTimes="${keyTimes}"
+                                 keyPoints="${keyPoints}"
+                                 calcMode="linear"
+                                 />
                             <!-- Truck Body -->
                             <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
                             <!-- Truck Cab -->
@@ -652,11 +672,11 @@
             if (totalDischarge > 0) {
                  const dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
                  let dischargingHTML = `
-                     <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
-                         <h4 class="font-bold text-blue-800">Discharging</h4>
-                         <p class="font-semibold text-gray-600">Total: ${totalDischargeCurrent.toFixed(2)} / ${totalDischarge.toFixed(2)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
-                         <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
-                     </div>
+                      <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
+                          <h4 class="font-bold text-blue-800">Discharging</h4>
+                          <p class="font-semibold text-gray-600">Total: ${totalDischargeCurrent.toFixed(2)} / ${totalDischarge.toFixed(2)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
+                          <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
+                      </div>
                 `;
                 dischargingHTML += createProgressHTML('To Warehouse', discharge.warehouse[unit], unit);
                 dischargingHTML += createProgressHTML('Direct by Truck', discharge.truck[unit], unit);
@@ -674,11 +694,11 @@
             if (totalLoading > 0) {
                 const loadingPercentage = (totalLoadingCurrent / totalLoading) * 100;
                 let loadingHTML = `
-                    <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
-                        <h4 class="font-bold text-yellow-800">Loading</h4>
+                     <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
+                         <h4 class="font-bold text-yellow-800">Loading</h4>
                          <p class="font-semibold text-gray-600">Total: ${totalLoadingCurrent.toFixed(2)} / ${totalLoading.toFixed(2)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
-                        <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
-                    </div>
+                         <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
+                     </div>
                 `;
                 loadingHTML += createProgressHTML('From Warehouse', loading.warehouse[unit], unit, 'bg-yellow-500');
                 loadingHTML += createProgressHTML('Direct by Truck', loading.truck[unit], unit, 'bg-yellow-500');
