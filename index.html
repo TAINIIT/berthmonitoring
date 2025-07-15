@@ -234,26 +234,31 @@
              ];
  
              let vesselIdCounter = 1;
- 
+             const baseDate = new Date('2025-07-15T16:35:00');
+
              for (let i = 0; i < 24; i++) {
-                 const opType = opTypes[(i + Math.floor(Math.random() * opTypes.length)) % opTypes.length];
+                 const opType = opTypes[i % opTypes.length];
                  const status = (i % 4 === 0) ? 'non-working' : 'working';
                  const hasDischarge = opType === 'import' || opType === 'both';
                  const hasLoad = opType === 'export' || opType === 'both';
                  const isDoubleBanked = i === 2 || i === 17; // TRITON 3, CLIPPER 18
- 
+                 
+                 const atb = new Date(baseDate.getTime() - i * 3 * 3600 * 1000 - Math.random() * 3600 * 1000);
+                 const etd = new Date(atb.getTime() + (2 + Math.floor(Math.random() * 5)) * 24 * 3600 * 1000);
+
+
                  const mainVessel = {
                      id: `vessel-${vesselIdCounter++}`,
-                     name: `${names[(i + Math.floor(Math.random() * names.length)) % names.length]} ${i+1}`,
+                     name: `${names[i]} ${i+1}`,
                      vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}`,
-                     atb: `15/07/2025 ${String(i).padStart(2, '0')}:00`,
-                     etd: `20/07/2025 ${String(i).padStart(2, '0')}:00`,
+                     atb: atb,
+                     etd: etd,
                      berthNo: berths[i].berthNo,
                      shipCallNo: `SC${1001+i}`,
                      loa: 150 + (i * 10 % 150),
                      mt: 20000 + (i * 5000),
                      commodityGroup: 'Mixed',
-                     commodity: commodities[(i + Math.floor(Math.random() * commodities.length)) % commodities.length],
+                     commodity: commodities[i % commodities.length],
                      doubleBanking: isDoubleBanked,
                      status: status,
                      operationType: opType,
@@ -261,14 +266,14 @@
                      data: {
                          discharging: {
                              total: { MT: hasDischarge ? 50000 : 0, M3: hasDischarge ? 32000 : 0, QTY: hasDischarge ? 2000 : 0 },
-                             warehouse: { MT: { current: hasDischarge ? 5000 : 0, total: 15000 }, M3: { current: 3200, total: 9600 }, QTY: { current: 200, total: 600 } },
-                             truck: { MT: { current: hasDischarge ? 7500 : 0, total: 10000 }, M3: { current: 4800, total: 6400 }, QTY: { current: 300, total: 400 } },
-                             barge: { MT: { current: hasDischarge && isDoubleBanked ? 12500 : 0, total: 25000 }, M3: { current: 8000, total: 16000 }, QTY: { current: 500, total: 1000 } }
+                             warehouse: { MT: { current: hasDischarge ? 5000 : 0, total: 15000 }, M3: { current: hasDischarge ? 3200 : 0, total: 9600 }, QTY: { current: hasDischarge ? 200 : 0, total: 600 } },
+                             truck: { MT: { current: hasDischarge ? 7500 : 0, total: 10000 }, M3: { current: hasDischarge ? 4800 : 0, total: 6400 }, QTY: { current: hasDischarge ? 300 : 0, total: 400 } },
+                             barge: { MT: { current: hasDischarge && isDoubleBanked ? 12500 : 0, total: 25000 }, M3: { current: hasDischarge && isDoubleBanked ? 8000 : 0, total: 16000 }, QTY: { current: hasDischarge && isDoubleBanked ? 500 : 0, total: 1000 } }
                          },
                          loading: {
                              total: { MT: hasLoad ? 40000 : 0, M3: hasLoad ? 24000 : 0, QTY: hasLoad ? 1800 : 0 },
-                             warehouse: { MT: { current: hasLoad ? 10000 : 0, total: 15000 }, M3: { current: 6000, total: 9000 }, QTY: { current: 500, total: 700 } },
-                             truck: { MT: { current: hasLoad ? 15000 : 0, total: 20000 }, M3: { current: 9000, total: 12000 }, QTY: { current: 700, total: 900 } },
+                             warehouse: { MT: { current: hasLoad ? 10000 : 0, total: 15000 }, M3: { current: hasLoad ? 6000 : 0, total: 9000 }, QTY: { current: hasLoad ? 500 : 0, total: 700 } },
+                             truck: { MT: { current: hasLoad ? 15000 : 0, total: 20000 }, M3: { current: hasLoad ? 9000 : 0, total: 12000 }, QTY: { current: hasLoad ? 700 : 0, total: 900 } },
                              barge: { MT: { current: 0, total: 5000 }, M3: { current: 0, total: 3000 }, QTY: { current: 0, total: 200 } }
                          }
                      }
@@ -277,8 +282,6 @@
  
                  if (isDoubleBanked) {
                      const bargePos = {...mainVessel.position};
-                     // If vessel is on the left side of a pier (B1-5, B16-20), barge is on its left.
-                     // Otherwise, it's on the right side of a pier (B6-10, B21-24), so barge is on its right.
                      if (mainVessel.position.x === 125 || mainVessel.position.x === 825) {
                          bargePos.x -= 25;
                      } else {
@@ -289,9 +292,11 @@
  
                      data.push({
                          id: `vessel-${vesselIdCounter++}`,
-                         name: `${names[(i + Math.floor(Math.random() * names.length)) % names.length]} BARGE`,
+                         name: `${names[i]} BARGE`,
                          vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}-B`,
-                         atb: mainVessel.atb, etd: mainVessel.etd, berthNo: `${mainVessel.berthNo} (DB)`,
+                         atb: mainVessel.atb, 
+                         etd: mainVessel.etd, 
+                         berthNo: `${mainVessel.berthNo} (DB)`,
                          shipCallNo: `SC${1001+i}-B`, loa: 80, mt: 10000,
                          commodityGroup: mainVessel.commodityGroup, commodity: mainVessel.commodity,
                          doubleBanking: false, status: 'working', operationType: 'export',
@@ -337,16 +342,31 @@
  
          function updateDateTime() {
             const now = new Date();
-            // Format: DD/MM/YYYY HH:MM:SS
             const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+            const month = String(now.getMonth() + 1).padStart(2, '0');
             const year = now.getFullYear();
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
-            
             const formattedDateTime = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
             dateTimeInput.value = formattedDateTime;
+        }
+
+        function formatNumber(num) {
+            return Number(num).toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+
+        function formatVesselDate(date) {
+            if (!(date instanceof Date) || isNaN(date)) return 'N/A';
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
 
          function getOperationColor(operationType) {
@@ -378,26 +398,25 @@
                      let craneX, craneY, armLength, armHeight, trolleyWidth, trolleyHeight, hookPath;
                      let trolleyAnimation = '';
  
-                     // Crane positioning logic
-                     if (pos.y < 100) { // Top Pier (B11-B15)
+                     if (pos.y < 100) { 
                          craneX = pos.x + pos.width / 2 - 25;
-                         craneY = pos.y + pos.height; // Positioned on the pier (land side)
+                         craneY = pos.y + pos.height;
                          armLength = 50; armHeight = 30; trolleyWidth = 5; trolleyHeight = 10;
                          hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
                          if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; ${armLength - trolleyWidth} 0; 0 0" dur="5s" repeatCount="indefinite" />`;
-                     } else { // Side Piers
+                     } else { 
                          armLength = 30; armHeight = 50; trolleyWidth = 10; trolleyHeight = 5;
                          hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
                          if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; 0 ${armHeight - trolleyHeight}; 0 0" dur="5s" repeatCount="indefinite" />`;
                          craneY = pos.y + pos.height / 2 - 25;
  
-                         if (pos.x < 200) { // Pier 1 Left (B1-B5) - Crane on right (land)
+                         if (pos.x < 200) {
                              craneX = pos.x + pos.width;
-                         } else if (pos.x < 500) { // Pier 1 Right (B6-B10) - Crane on left (land)
+                         } else if (pos.x < 500) {
                              craneX = pos.x - armLength;
-                         } else if (pos.x < 900) { // Pier 2 Left (B16-B20) - Crane on right (land)
+                         } else if (pos.x < 900) {
                              craneX = pos.x + pos.width;
-                         } else { // Pier 2 Right (B21-B24) - Crane on left (land)
+                         } else {
                              craneX = pos.x - armLength;
                          }
                      }
@@ -444,24 +463,23 @@
                  const pos = vessel.position;
                  let x, y, rotation = 0;
  
-                 // Check for Top Pier first based on Y coordinate to prevent mis-categorization
-                 if (pos.y < 100) { // Top Pier (B11-B15)
+                 if (pos.y < 100) { 
                      x = pos.x + pos.width / 2;
-                     y = pos.y - 15; // Position label above the pier
+                     y = pos.y - 15;
                      rotation = 0;
-                 } else if (pos.x < 200) { // Pier 1 Left (B1-B5)
+                 } else if (pos.x < 200) {
                      x = pos.x - 15;
                      y = pos.y + pos.height / 2;
                      rotation = -90;
-                 } else if (pos.x < 500) { // Pier 1 Right (B6-B10)
+                 } else if (pos.x < 500) {
                      x = pos.x + pos.width + 15;
                      y = pos.y + pos.height / 2;
                      rotation = 90;
-                 } else if (pos.x < 900) { // Pier 2 Left (B16-B20)
+                 } else if (pos.x < 900) {
                      x = pos.x - 15;
                      y = pos.y + pos.height / 2;
                      rotation = -90;
-                 } else { // Pier 2 Right (B21-B24)
+                 } else {
                      x = pos.x + pos.width + 15;
                      y = pos.y + pos.height / 2;
                      rotation = 90;
@@ -472,14 +490,14 @@
  
  
          function renderBitts() {
-             const bittSpacing = 20; // Denser bitts
+             const bittSpacing = 20;
              let bittHTML = '';
              const pierEdges = [
-                 { start: { x: 150, y: 100 }, end: { x: 150, y: 550 } }, // Pier 1 Left
-                 { start: { x: 350, y: 100 }, end: { x: 350, y: 550 } }, // Pier 1 Right
-                 { start: { x: 350, y: 100 }, end: { x: 850, y: 100 } }, // Top Pier
-                 { start: { x: 850, y: 100 }, end: { x: 850, y: 550 } }, // Pier 2 Left
-                 { start: { x: 1050, y: 100 }, end: { x: 1050, y: 550 } },// Pier 2 Right
+                 { start: { x: 150, y: 100 }, end: { x: 150, y: 550 } },
+                 { start: { x: 350, y: 100 }, end: { x: 350, y: 550 } },
+                 { start: { x: 350, y: 100 }, end: { x: 850, y: 100 } },
+                 { start: { x: 850, y: 100 }, end: { x: 850, y: 550 } },
+                 { start: { x: 1050, y: 100 }, end: { x: 1050, y: 550 } },
              ];
  
              pierEdges.forEach(edge => {
@@ -491,7 +509,7 @@
                  for (let i = 1; i <= numBitts; i++) {
                      const x = edge.start.x + (dx / length) * (i * bittSpacing);
                      const y = edge.start.y + (dy / length) * (i * bittSpacing);
-                     bittHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#ef4444" />`; // Red bitts
+                     bittHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#ef4444" />`;
                  }
              });
              bittContainer.innerHTML = bittHTML;
@@ -502,22 +520,18 @@
              const lineSpacing = 25;
              const stroke = 'stroke="#f59e0b" stroke-width="2"';
  
-             // Pier 1 parking lanes
              for (let x = 170; x < 350; x += lineSpacing) {
                  lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
              }
-             // Pier 2 parking lanes
              for (let x = 870; x < 1050; x += lineSpacing) {
                  lanesHTML += `<path d="M ${x} 110 L ${x} 540" ${stroke} />`;
              }
-             // Top landside parking lanes
              for (let y = 20; y < 80; y += lineSpacing) {
                   lanesHTML += `<path d="M 150 ${y} L 1050 ${y}" ${stroke} />`;
              }
-              // Main driving lanes (solid)
-             lanesHTML += `<path d="M 360 85 L 840 85" stroke="#f59e0b" stroke-width="3" />`; // Landside main
-             lanesHTML += `<path d="M 250 100 L 250 550" stroke="#f59e0b" stroke-width="3" />`; // Pier 1 main
-             lanesHTML += `<path d="M 950 100 L 950 550" stroke="#f59e0b" stroke-width="3" />`; // Pier 2 main
+             lanesHTML += `<path d="M 360 85 L 840 85" stroke="#f59e0b" stroke-width="3" />`;
+             lanesHTML += `<path d="M 250 100 L 250 550" stroke="#f59e0b" stroke-width="3" />`;
+             lanesHTML += `<path d="M 950 100 L 950 550" stroke="#f59e0b" stroke-width="3" />`;
  
              roadLanesContainer.innerHTML = lanesHTML;
          }
@@ -529,16 +543,15 @@
              const workingVessels = vesselData.filter(v => v.status === 'working' && !v.berthNo.includes('(DB)'));
              if (workingVessels.length === 0) {
                  truckContainer.innerHTML = '';
-                 return; // No trucks if no vessels are working
+                 return;
              }
  
-             const numTrucks = 25; // Increased truck count
+             const numTrucks = 25;
              for(let i=0; i < numTrucks; i++) {
                  const targetVessel = workingVessels[i % workingVessels.length];
                  const onPier1 = targetVessel.position.x < 500;
                  const onTopPier = targetVessel.position.y < 100;
                  
-                 // Define start, corner, parking and crane coordinates
                  const startX = 400 + Math.random() * 400;
                  const startY = 85;
                  
@@ -548,26 +561,22 @@
                      pierRoadX = targetVessel.position.x + targetVessel.position.width / 2;
                      targetY = startY;
                      parkingX = pierRoadX;
-                     parkingY = targetVessel.position.y + targetVessel.position.height + 20; // Park below crane
-                 } else { // On Pier 1 or 2
+                     parkingY = targetVessel.position.y + targetVessel.position.height + 20;
+                 } else {
                      pierRoadX = onPier1 ? 250 : 950;
                      targetY = targetVessel.position.y + targetVessel.position.height / 2;
                      parkingY = targetY;
-                     // Park next to the pier road, closer to the vessel
                      parkingX = onPier1 ? pierRoadX + 25 : pierRoadX - 25; 
                  }
  
                  const pathToParking = `M ${startX},${startY} L ${pierRoadX},${startY} L ${pierRoadX},${targetY} L ${parkingX},${parkingY}`;
                  const pathFromParking = `M ${parkingX},${parkingY} L ${pierRoadX},${targetY} L ${pierRoadX},${startY} L ${startX},${startY}`;
-                 
-                 const fullPath = `${pathToParking} ${pathFromParking.substring(1)}`; // Combine paths
+                 const fullPath = `${pathToParking} ${pathFromParking.substring(1)}`;
  
-                 // Use keyPoints to create the pause. The path to parking is the first half of the animation.
                  const keyPoints = "0; 0.5; 0.5; 1"; 
-                 const totalDuration = 15 + Math.random() * 8; // 15-23 seconds for a round trip
+                 const totalDuration = 15 + Math.random() * 8;
                  const pauseDuration = 2;
                  
-                 // Adjust keyTimes to insert the pause correctly
                  const travelDuration = totalDuration - pauseDuration;
                  const timeToPause = travelDuration / 2;
                  const timeAfterPause = timeToPause + pauseDuration;
@@ -586,9 +595,7 @@
                                   keyPoints="${keyPoints}"
                                   calcMode="linear"
                                   />
-                             <!-- Truck Body -->
                              <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
-                             <!-- Truck Cab -->
                              <rect x="4" y="-5" width="8" height="10" fill="#6b7280" rx="1" />
                          </g>
                      </g>
@@ -608,9 +615,9 @@
                          <td class="p-3">${vessel.berthNo}</td>
                          <td class="p-3">${vessel.shipCallNo}</td>
                          <td class="p-3">${vessel.loa}</td>
-                         <td class="p-3">${vessel.atb}</td>
-                         <td class="p-3">${vessel.etd}</td>
-                         <td class="p-3">${vessel.mt}</td>
+                         <td class="p-3">${formatVesselDate(vessel.atb)}</td>
+                         <td class="p-3">${formatVesselDate(vessel.etd)}</td>
+                         <td class="p-3">${formatNumber(vessel.mt)}</td>
                          <td class="p-3">${vessel.commodityGroup}</td>
                          <td class="p-3">${vessel.commodity}</td>
                          <td class="p-3 text-center"><input type="checkbox" ${isChecked} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" disabled></td>
@@ -620,26 +627,38 @@
          }
          
          function updateSidebar(vessel) {
-             currentVessel = vessel;
-             vesselNameDisplay.innerHTML = `<span class="font-bold">${vessel.name}</span> <span class="text-gray-500 font-normal">/ ${vessel.vesCallId}</span>`;
-             
-             document.querySelectorAll('.vessel-bar-svg').forEach(bar => bar.classList.remove('selected-svg'));
-             document.querySelector(`[data-vessel-id='${vessel.id}']`).classList.add('selected-svg');
- 
-             vesselTableBody.querySelectorAll('tr').forEach(row => row.classList.remove('selected-row'));
-             const tableRow = vesselTableBody.querySelector(`tr[data-vescallid="${vessel.vesCallId}"]`);
-             if (tableRow) {
-                 tableRow.classList.add('selected-row');
-             }
- 
-             updateProgressBars();
-         }
+            currentVessel = vessel;
+
+            const vesselIndex = vesselData.findIndex(v => v.id === vessel.id);
+            if (vesselIndex > -1) {
+                const [selectedVesselItem] = vesselData.splice(vesselIndex, 1);
+                vesselData.unshift(selectedVesselItem);
+            }
+
+            renderTable();
+
+            vesselNameDisplay.innerHTML = `<span class="font-bold">${vessel.name}</span> <span class="text-gray-500 font-normal">/ ${vessel.vesCallId}</span>`;
+            
+            document.querySelectorAll('.vessel-bar-svg').forEach(bar => bar.classList.remove('selected-svg'));
+            const svgElement = document.querySelector(`[data-vessel-id='${vessel.id}']`);
+            if (svgElement) {
+                svgElement.classList.add('selected-svg');
+            }
+
+            vesselTableBody.querySelectorAll('tr').forEach(row => row.classList.remove('selected-row'));
+            const tableRow = vesselTableBody.querySelector(`tr[data-vescallid="${vessel.vesCallId}"]`);
+            if (tableRow) {
+                tableRow.classList.add('selected-row');
+            }
+
+            updateProgressBars();
+        }
  
          function createProgressHTML(title, data, unit, colorClass = 'bg-blue-500') {
              const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
              return `
                  <div class="border border-gray-300 rounded-lg p-3 ml-4">
-                     <p class="text-gray-600">${title}: ${data.current.toFixed(2)} / ${data.total.toFixed(2)} (${unit}) ${percentage.toFixed(2)}%</p>
+                     <p class="text-gray-600">${title}: ${formatNumber(data.current)} / ${formatNumber(data.total)} (${unit}) ${percentage.toFixed(2)}%</p>
                      <div class="progress-bar-container mt-1"><div class="progress-bar ${colorClass}" style="width: ${percentage}%;"></div></div>
                  </div>
              `;
@@ -654,60 +673,81 @@
  
              const unit = unitTypeSelect.value;
              
+             // --- Discharging Section ---
              const discharge = currentVessel.data.discharging;
-             const totalDischargeCurrent = discharge.warehouse[unit].current + discharge.truck[unit].current + discharge.barge[unit].current;
              const totalDischarge = discharge.total[unit];
              
              if (totalDischarge > 0) {
-                  const dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
-                  let dischargingHTML = `
-                       <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
-                           <h4 class="font-bold text-blue-800">Discharging</h4>
-                           <p class="font-semibold text-gray-600">Total: ${totalDischargeCurrent.toFixed(2)} / ${totalDischarge.toFixed(2)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
-                           <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
-                       </div>
+                 dischargingSection.classList.remove('hidden');
+                 const totalDischargeCurrent = discharge.warehouse[unit].current + discharge.truck[unit].current + discharge.barge[unit].current;
+                 const dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
+                 let dischargingHTML = `
+                     <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
+                         <h4 class="font-bold text-blue-800">Discharging</h4>
+                         <p class="font-semibold text-gray-600">Total: ${formatNumber(totalDischargeCurrent)} / ${formatNumber(totalDischarge)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
+                         <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
+                     </div>
                  `;
-                 dischargingHTML += createProgressHTML('To Warehouse', discharge.warehouse[unit], unit);
-                 dischargingHTML += createProgressHTML('Direct by Truck', discharge.truck[unit], unit);
-                 dischargingHTML += createProgressHTML('Direct by Barge', discharge.barge[unit], unit);
+                 if (discharge.warehouse[unit].total > 0) {
+                    dischargingHTML += createProgressHTML('To Warehouse', discharge.warehouse[unit], unit);
+                 }
+                 if (discharge.truck[unit].total > 0) {
+                    dischargingHTML += createProgressHTML('Direct by Truck', discharge.truck[unit], unit);
+                 }
+                 if (discharge.barge[unit].total > 0) {
+                    dischargingHTML += createProgressHTML('Direct by Barge', discharge.barge[unit], unit);
+                 }
                  dischargingSection.innerHTML = dischargingHTML;
              } else {
                  dischargingSection.innerHTML = '';
+                 dischargingSection.classList.add('hidden');
              }
  
- 
+             // --- Loading Section ---
              const loading = currentVessel.data.loading;
-             const totalLoadingCurrent = loading.warehouse[unit].current + loading.truck[unit].current + loading.barge[unit].current;
              const totalLoading = loading.total[unit];
  
              if (totalLoading > 0) {
+                 loadingSection.classList.remove('hidden');
+                 const totalLoadingCurrent = loading.warehouse[unit].current + loading.truck[unit].current + loading.barge[unit].current;
                  const loadingPercentage = (totalLoadingCurrent / totalLoading) * 100;
                  let loadingHTML = `
-                      <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
-                          <h4 class="font-bold text-yellow-800">Loading</h4>
-                          <p class="font-semibold text-gray-600">Total: ${totalLoadingCurrent.toFixed(2)} / ${totalLoading.toFixed(2)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
-                          <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
-                      </div>
+                     <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
+                         <h4 class="font-bold text-yellow-800">Loading</h4>
+                         <p class="font-semibold text-gray-600">Total: ${formatNumber(totalLoadingCurrent)} / ${formatNumber(totalLoading)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
+                         <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
+                     </div>
                  `;
-                 loadingHTML += createProgressHTML('From Warehouse', loading.warehouse[unit], unit, 'bg-yellow-500');
-                 loadingHTML += createProgressHTML('Direct by Truck', loading.truck[unit], unit, 'bg-yellow-500');
-                 loadingHTML += createProgressHTML('Direct by Barge', loading.barge[unit], unit, 'bg-yellow-500');
+                if(loading.warehouse[unit].total > 0) {
+                    loadingHTML += createProgressHTML('From Warehouse', loading.warehouse[unit], unit, 'bg-yellow-500');
+                }
+                if(loading.truck[unit].total > 0) {
+                    loadingHTML += createProgressHTML('Direct by Truck', loading.truck[unit], unit, 'bg-yellow-500');
+                }
+                if(loading.barge[unit].total > 0) {
+                    loadingHTML += createProgressHTML('Direct by Barge', loading.barge[unit], unit, 'bg-yellow-500');
+                }
                  loadingSection.innerHTML = loadingHTML;
              } else {
                  loadingSection.innerHTML = '';
+                 loadingSection.classList.add('hidden');
              }
          }
          
          function fullRender() {
+             vesselData = generateVesselData();
+             // Default sort: latest ATB first
+             vesselData.sort((a, b) => b.atb.getTime() - a.atb.getTime());
+
              renderRoadLanes();
              renderVessels();
-             renderTable();
              renderBerthLabels();
              renderBitts();
              renderTrucks();
+             
+             // On initial load, select the first vessel (latest ATB) and render everything
              if (vesselData.length > 0) {
-                 const reselectedVessel = vesselData.find(v => v.id === (currentVessel ? currentVessel.id : null)) || vesselData[0];
-                 updateSidebar(reselectedVessel);
+                 updateSidebar(vesselData[0]);
              }
          }
  
@@ -732,8 +772,8 @@
                  if (vessel) {
                      tooltip.innerHTML = `
                          <div><strong>VesCallID:</strong> ${vessel.vesCallId}</div>
-                         <div><strong>ATB:</strong> ${vessel.atb}</div>
-                         <div><strong>ETD:</strong> ${vessel.etd}</div>
+                         <div><strong>ATB:</strong> ${formatVesselDate(vessel.atb)}</div>
+                         <div><strong>ETD:</strong> ${formatVesselDate(vessel.etd)}</div>
                      `;
                      tooltip.style.display = 'block';
                  }
@@ -771,39 +811,36 @@
              refreshIcon.classList.add('animate-spin');
              
              setTimeout(() => {
-                 vesselData = generateVesselData(); // Generate new random data
+                 vesselData = generateVesselData(); 
                  fullRender();
-                 updateDateTime(); // Update the date/time on refresh
+                 updateDateTime();
                  refreshIcon.classList.remove('animate-spin');
              }, 500);
          });
          
          svgContainer.addEventListener('dblclick', () => {
              const clonedSvg = berthSvg.cloneNode(true);
-             // Re-attach event listeners to the cloned SVG's vessels if needed for interactivity in fullscreen
              const newVesselElements = clonedSvg.querySelectorAll('.vessel-bar-svg');
              newVesselElements.forEach(el => {
                  el.addEventListener('click', (e) => {
                      const vesselId = el.dataset.vesselId;
                      const selectedVessel = vesselData.find(v => v.id === vesselId);
                      if(selectedVessel) {
-                         // Maybe show a modal with vessel info or just log it
                          console.log("Clicked in fullscreen:", selectedVessel.name);
                      }
-                     e.stopPropagation(); // Prevent dblclick from firing again
+                     e.stopPropagation();
                  });
              });
  
-             // The close button is now part of the static HTML, we just need to handle its clone
              const closeBtnClone = closeFullscreenBtn.cloneNode(true);
              closeBtnClone.id = 'fullscreen-close-clone';
              closeBtnClone.addEventListener('click', () => {
                  fullscreenModal.classList.add('hidden');
                  fullscreenModal.classList.remove('flex');
-                 fullscreenContent.innerHTML = ''; // Clear content to prevent ID conflicts
+                 fullscreenContent.innerHTML = '';
              });
  
-             fullscreenContent.innerHTML = ''; // Clear previous content
+             fullscreenContent.innerHTML = '';
              fullscreenContent.appendChild(clonedSvg);
              fullscreenContent.appendChild(closeBtnClone);
              
