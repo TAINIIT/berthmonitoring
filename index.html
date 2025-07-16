@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giám sát Cầu cảng</title>
+    <title>Berth Monitoring</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -110,7 +110,7 @@
     <!-- Progress Bar Overlay -->
     <div id="progress-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl text-center">
-            <div class="text-lg font-semibold mb-3">Đang xử lý...</div>
+            <div class="text-lg font-semibold mb-3">In Progress...</div>
             <div class="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div id="progress-bar-inner" class="h-full bg-blue-500 rounded-full"></div>
             </div>
@@ -127,7 +127,7 @@
     <div class="min-h-screen flex flex-col p-2 sm:p-4 gap-4">
 
         <header class="flex flex-wrap justify-between items-center bg-white p-3 rounded-lg shadow-sm gap-2">
-            <h1 class="text-lg sm:text-xl font-bold text-gray-700">Giám sát Cầu cảng</h1>
+            <h1 class="text-lg sm:text-xl font-bold text-gray-700">Berth Monitoring</h1>
             <div class="flex items-center flex-wrap justify-end gap-2 sm:gap-4">
                 <div class="flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-lg px-3 py-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock text-gray-500" viewBox="0 0 16 16">
@@ -141,7 +141,7 @@
                         <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
                         <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
                     </svg>
-                    Làm mới
+                    Refresh
                 </button>
                  <button id="toggle-sidebar" class="p-2 rounded-md hover:bg-gray-200 transition-colors">
                      <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-chevron-double-right" viewBox="0 0 16 16">
@@ -160,7 +160,7 @@
 
                 <div class="bg-white p-2 sm:p-4 rounded-lg shadow-sm flex flex-col flex-grow">
                     <!-- RESPONSIVE: SVG container height is now relative to viewport height (vh) -->
-                    <div id="svg-container" class="w-full min-h-[300px] h-[50vh] sm:h-[60vh] border border-gray-200 rounded-lg bg-cyan-100 cursor-pointer" title="Nháy đúp hoặc nhấn 'F' để mở rộng">
+                    <div id="svg-container" class="w-full min-h-[300px] h-[50vh] sm:h-[60vh] border border-gray-200 rounded-lg bg-cyan-100 cursor-pointer" title="Double click or press 'F' to expand">
                         <svg id="berth-svg" width="100%" height="100%" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet">
                             <defs>
                                 <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -199,13 +199,13 @@
 
                 <div class="bg-white rounded-lg shadow-sm overflow-hidden">
                     <div class="bg-blue-600 text-white p-3 font-bold">
-                        Trạng thái Giám sát Tàu
+                        Vessel Monitoring Status
                     </div>
                     <div class="overflow-x-auto h-64">
                         <table class="w-full text-left min-w-[1200px]">
                             <thead class="bg-gray-50 sticky top-0">
                                 <tr>
-                                    <th class="p-3 font-semibold">VesCallID</th><th class="p-3 font-semibold">Tên Tàu</th><th class="p-3 font-semibold">Số Cầu</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Nhóm Hàng hóa</th><th class="p-3 font-semibold">Hàng hóa</th><th class="p-3 font-semibold">Đậu đôi</th>
+                                    <th class="p-3 font-semibold">Vessel Call ID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
                                 </tr>
                             </thead>
                             <tbody id="vessel-table-body">
@@ -220,18 +220,18 @@
                 <div class="bg-white p-4 rounded-lg shadow-sm space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <h3 class="font-bold mb-4 text-base sm:text-lg">Loại hình Khai thác</h3>
+                            <h3 class="font-bold mb-4 text-base sm:text-lg">Operation Type</h3>
                             <div class="space-y-3 text-sm sm:text-base">
-                                <label class="flex items-center"><div class="w-5 h-5 bg-green-500 rounded-sm mr-3"></div>Nhập khẩu</label>
-                                <label class="flex items-center"><div class="w-5 h-5 bg-blue-500 rounded-sm mr-3"></div>Xuất khẩu</label>
-                                <label class="flex items-center"><div class="w-5 h-5 bg-purple-500 rounded-sm mr-3"></div>Cả hai</label>
+                                <label class="flex items-center"><div class="w-5 h-5 bg-green-500 rounded-sm mr-3"></div>Import</label>
+                                <label class="flex items-center"><div class="w-5 h-5 bg-blue-500 rounded-sm mr-3"></div>Export</label>
+                                <label class="flex items-center"><div class="w-5 h-5 bg-purple-500 rounded-sm mr-3"></div>Both</label>
                             </div>
                         </div>
                         <div>
-                            <h3 class="font-bold mb-4 text-base sm:text-lg">Trạng thái Tàu</h3>
+                            <h3 class="font-bold mb-4 text-base sm:text-lg">Vessel Status</h3>
                             <div class="space-y-3 text-sm sm:text-base">
-                                <label class="flex items-center"><div class="w-5 h-5 border-4 border-yellow-400 rounded-sm mr-3"></div>Đang hoạt động</label>
-                                <label class="flex items-center"><div class="w-5 h-5 border-4 border-red-500 rounded-sm mr-3"></div>Không hoạt động</label>
+                                <label class="flex items-center"><div class="w-5 h-5 border-4 border-yellow-400 rounded-sm mr-3"></div>On Working</label>
+                                <label class="flex items-center"><div class="w-5 h-5 border-4 border-red-500 rounded-sm mr-3"></div>Non Working</label>
                             </div>
                         </div>
                     </div>
@@ -239,7 +239,7 @@
                     <div>
                         <h2 id="vessel-name-display" class="text-lg sm:text-xl font-bold text-gray-800 break-all">-</h2>
                         <div class="mt-2">
-                            <label for="unit-type" class="block text-sm sm:text-base font-bold text-gray-700 mb-1">Đơn vị tính</label>
+                            <label for="unit-type" class="block text-sm sm:text-base font-bold text-gray-700 mb-1">Unit Type</label>
                             <select id="unit-type" name="unit-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base font-bold border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
                                 <option>MT</option>
                                 <option>M3</option>
@@ -824,19 +824,19 @@
 
                 let dischargingHTML = `
                     <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
-                        <h4 class="font-bold text-blue-800">Dỡ hàng</h4>
-                        <p class="font-semibold text-gray-600">Tổng cộng: <span class="count-up" data-target="${totalDischargeCurrent}">0</span> / ${formatNumber(totalDischarge)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
+                        <h4 class="font-bold text-blue-800">Discharging</h4>
+                        <p class="font-semibold text-gray-600">Total: <span class="count-up" data-target="${totalDischargeCurrent}">0</span> / ${formatNumber(totalDischarge)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
                         <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
                     </div>
                 `;
                 if (discharge.warehouse[unit].total > 0) {
-                  dischargingHTML += createProgressHTML('Vào Kho', discharge.warehouse[unit], unit);
+                  dischargingHTML += createProgressHTML('To Warehouse', discharge.warehouse[unit], unit);
                 }
                 if (discharge.truck[unit].total > 0) {
-                  dischargingHTML += createProgressHTML('Giao thẳng bằng Xe tải', discharge.truck[unit], unit);
+                  dischargingHTML += createProgressHTML('Direct by Truck', discharge.truck[unit], unit);
                 }
                 if (discharge.barge[unit].total > 0) {
-                  dischargingHTML += createProgressHTML('Giao thẳng bằng Sà lan', discharge.barge[unit], unit);
+                  dischargingHTML += createProgressHTML('Direct by Barge', discharge.barge[unit], unit);
                 }
                 dischargingSection.innerHTML = dischargingHTML;
             } else {
@@ -855,19 +855,19 @@
 
                 let loadingHTML = `
                     <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
-                        <h4 class="font-bold text-yellow-800">Xếp hàng</h4>
-                        <p class="font-semibold text-gray-600">Tổng cộng: <span class="count-up" data-target="${totalLoadingCurrent}">0</span> / ${formatNumber(totalLoading)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
+                        <h4 class="font-bold text-yellow-800">Loading</h4>
+                        <p class="font-semibold text-gray-600">Total: <span class="count-up" data-target="${totalLoadingCurrent}">0</span> / ${formatNumber(totalLoading)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
                         <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
                     </div>
                 `;
                if(loading.warehouse[unit].total > 0) {
-                   loadingHTML += createProgressHTML('Từ Kho', loading.warehouse[unit], unit, 'bg-yellow-500');
+                   loadingHTML += createProgressHTML('From Warehouse', loading.warehouse[unit], unit, 'bg-yellow-500');
                }
                if(loading.truck[unit].total > 0) {
-                   loadingHTML += createProgressHTML('Giao thẳng bằng Xe tải', loading.truck[unit], unit, 'bg-yellow-500');
+                   loadingHTML += createProgressHTML('Direct by Truck', loading.truck[unit], unit, 'bg-yellow-500');
                }
                if(loading.barge[unit].total > 0) {
-                   loadingHTML += createProgressHTML('Giao thẳng bằng Sà lan', loading.barge[unit], unit, 'bg-yellow-500');
+                   loadingHTML += createProgressHTML('Direct by Barge', loading.barge[unit], unit, 'bg-yellow-500');
                }
                 loadingSection.innerHTML = loadingHTML;
             } else {
@@ -951,7 +951,7 @@
                 if (vessel) {
                     tooltip.innerHTML = `
                         <div class='font-bold text-base mb-1'>${vessel.name}</div>
-                        <div><strong>Loại:</strong> ${vessel.vesselType || 'N/A'}</div>
+                        <div><strong>Type:</strong> ${vessel.vesselType || 'N/A'}</div>
                         <div><strong>ATA:</strong> ${formatVesselDate(vessel.ata)}</div>
                         <div><strong>ATB:</strong> ${formatVesselDate(vessel.atb)}</div>
                         <div><strong>ETD:</strong> ${formatVesselDate(vessel.etd)}</div>
