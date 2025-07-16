@@ -1,382 +1,407 @@
- <!DOCTYPE html>
- <html lang="en">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>Berth Monitoring</title>
-     <script src="https://cdn.tailwindcss.com"></script>
-     <link rel="preconnect" href="https://fonts.googleapis.com">
-     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-     <style>
-         /* Use the Inter font family */
-         body {
-             font-family: 'Inter', sans-serif;
-             background-color: #f0f2f5;
-         }
-         .vessel-bar-svg {
-             cursor: pointer;
-         }
-         .vessel-bar-svg rect {
-              /* Added smooth transition for stroke color and width */
-             transition: stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out;
-         }
-         .vessel-bar-svg:hover {
-             filter: brightness(1.15);
-         }
-         /* Custom styles for the progress bars */
-         .progress-bar-container {
-             background-color: #e9ecef;
-             border-radius: 9999px;
-             height: 0.75rem;
-             overflow: hidden;
-             width: 100%;
-         }
-         .progress-bar {
-             background-color: #3b82f6;
-             height: 100%;
-             border-radius: 9999px;
-             transition: width 0.3s ease-in-out;
-         }
-         /* Style for selected vessel */
-         .selected-svg rect {
-             stroke: #2563eb;
-             stroke-width: 4px;
-             stroke-opacity: 0.9;
-         }
-         /* Style for selected table row */
-         .selected-row {
-             background-color: #dbeafe !important; /* Blue-100 */
-         }
-         /* Tooltip style */
-         #tooltip {
-             position: absolute;
-             display: none;
-             background-color: rgba(0, 0, 0, 0.8);
-             color: white;
-             padding: 8px 12px;
-             border-radius: 6px;
-             font-size: 0.875rem;
-             z-index: 1000; /* Ensure tooltip is above everything */
-             pointer-events: none; /* So it doesn't interfere with mouse events */
-         }
-         .berth-label {
-             font-size: 14px;
-             font-weight: bold;
-             fill: #4a5568;
-             text-anchor: middle;
-         }
-         /* Crane animation */
-         @keyframes move-trolley-v {
-             0% { transform: translateY(0); }
-             50% { transform: translateY(50px); }
-             100% { transform: translateY(0); }
-         }
-         .crane-trolley-working-v {
-             animation: move-trolley-v 6s ease-in-out infinite;
-         }
-         /* Progress bar animation */
-         @keyframes progress-animation {
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giám sát Cầu cảng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Use the Inter font family */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .vessel-bar-svg {
+            cursor: pointer;
+            transition: filter 0.3s ease-in-out;
+        }
+        .vessel-bar-svg rect {
+            /* Added smooth transition for stroke color and width */
+            transition: stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out;
+        }
+        .vessel-bar-svg:hover {
+            filter: brightness(1.15) drop-shadow(0 0 8px #ffffff);
+        }
+        /* Custom styles for the progress bars */
+        .progress-bar-container {
+            background-color: #e9ecef;
+            border-radius: 9999px;
+            height: 0.75rem;
+            overflow: hidden;
+            width: 100%;
+        }
+        .progress-bar {
+            background-color: #3b82f6;
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.3s ease-in-out;
+        }
+        /* Style for selected vessel */
+        .selected-svg {
+             filter: drop-shadow(0 0 12px #fef08a); /* yellow-200 glow */
+        }
+        .selected-svg rect {
+            stroke: #facc15; /* yellow-400 */
+            stroke-width: 4px;
+            stroke-opacity: 1;
+        }
+        /* Style for selected table row */
+        .selected-row {
+            background-color: #dbeafe !important; /* Blue-100 */
+        }
+        /* Tooltip style */
+        #tooltip {
+            position: absolute;
+            display: none;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            z-index: 1000; /* Ensure tooltip is above everything */
+            pointer-events: none; /* So it doesn't interfere with mouse events */
+        }
+        .berth-label {
+            font-size: 14px;
+            font-weight: bold;
+            fill: #4a5568;
+            text-anchor: middle;
+        }
+        /* Progress bar animation */
+        @keyframes progress-animation {
             from { width: 0%; }
             to { width: 100%; }
-         }
-        .progress-bar-animated {
-            animation: progress-animation 1s linear forwards;
         }
-     </style>
- </head>
- <body class="text-gray-800 text-sm">
- 
-     <div id="tooltip"></div>
- 
-     <!-- Progress Bar Overlay -->
-     <div id="progress-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+       .progress-bar-animated {
+            animation: progress-animation 1s linear forwards;
+       }
+       /* Fullscreen Modal Animation */
+        #fullscreen-modal {
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        #fullscreen-modal.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        /* SVG Zoom on Hover */
+        #svg-container {
+            overflow: hidden;
+        }
+        #svg-container:hover #berth-svg {
+            transform: scale(1.05);
+        }
+        #berth-svg {
+            transition: transform 0.3s ease-in-out;
+            transform-origin: center center;
+        }
+
+    </style>
+</head>
+<body class="text-gray-800 text-sm">
+
+    <div id="tooltip"></div>
+
+    <!-- Progress Bar Overlay -->
+    <div id="progress-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl text-center">
-            <div class="text-lg font-semibold mb-3">In Progressing...</div>
+            <div class="text-lg font-semibold mb-3">Đang xử lý...</div>
             <div class="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div id="progress-bar-inner" class="h-full bg-blue-500 rounded-full"></div>
             </div>
         </div>
     </div>
 
-     <div id="fullscreen-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-40">
-         <div id="fullscreen-content" class="w-full h-full bg-white rounded-lg p-2 relative">
-              <button id="close-fullscreen" class="absolute top-2 right-2 text-gray-800 bg-white rounded-full p-2 z-10 hover:bg-gray-200">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                      <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
-                  </svg>
-              </button>
-              <!-- The cloned SVG will go here -->
-              </div>
-     </div>
- 
-     <div class="min-h-screen flex flex-col p-4 gap-4">
- 
-         <header class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-             <h1 class="text-xl font-bold text-gray-700">Berth Monitoring</h1>
-             <div class="flex items-center gap-4">
-                 <div class="flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-lg px-3 py-2">
+    <!-- Fullscreen Modal -->
+    <div id="fullscreen-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-40">
+        <div id="fullscreen-content" class="w-full h-full bg-white rounded-lg p-2 relative">
+             <!-- The cloned SVG will go here -->
+        </div>
+    </div>
+
+    <div class="min-h-screen flex flex-col p-2 sm:p-4 gap-4">
+
+        <header class="flex flex-wrap justify-between items-center bg-white p-3 rounded-lg shadow-sm gap-2">
+            <h1 class="text-lg sm:text-xl font-bold text-gray-700">Giám sát Cầu cảng</h1>
+            <div class="flex items-center flex-wrap justify-end gap-2 sm:gap-4">
+                <div class="flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-lg px-3 py-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock text-gray-500" viewBox="0 0 16 16">
                         <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
                         <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
                     </svg>
                     <input type="text" id="current-datetime" class="bg-transparent text-gray-700 font-medium text-sm focus:outline-none w-36" readonly>
                 </div>
-                 <button id="refresh-button" class="flex items-center gap-2 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors shadow-sm">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                         <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
-                         <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                <button id="refresh-button" class="flex items-center gap-2 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                    </svg>
+                    Làm mới
+                </button>
+                 <button id="toggle-sidebar" class="p-2 rounded-md hover:bg-gray-200 transition-colors">
+                     <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-chevron-double-right" viewBox="0 0 16 16">
+                         <path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
+                         <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>
                      </svg>
-                     Refresh
                  </button>
-                  <button id="toggle-sidebar" class="p-2 rounded-md hover:bg-gray-200 transition-colors">
-                      <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-chevron-double-right" viewBox="0 0 16 16">
-                          <path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
-                          <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>
-                      </svg>
-                  </button>
-             </div>
-         </header>
- 
-         <main id="main-grid" class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4">
- 
-             <div id="left-column" class="lg:col-span-2 flex flex-col gap-4 transition-all duration-300">
- 
-                 <div class="bg-white p-4 rounded-lg shadow-sm flex-grow">
-                     <div id="svg-container" class="w-full h-[32rem] border border-gray-200 rounded-lg bg-cyan-100 cursor-pointer" title="Double click to expand">
-                         <svg id="berth-svg" width="100%" height="100%" viewBox="0 0 1200 600">
-                             <defs>
-                                 <pattern id="water" patternUnits="userSpaceOnUse" width="60" height="60">
-                                     <path d="M 0 15 C 15 0, 30 0, 45 15 S 75 30, 90 15" stroke="#60a5fa" stroke-width="0.5" fill="none" />
-                                 </pattern>
-                             </defs>
-                             <rect width="100%" height="100%" fill="url(#water)" />
-                             
-                             <g id="port-layout">
-                                 <rect x="0" y="0" width="1200" height="100" fill="#d1d5db"/>
-                                 <path d="M 150 100 V 550 H 350 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
-                                 <path d="M 850 100 V 550 H 1050 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
-                                 
-                                 <g id="road-lanes-container"></g>
-                                 <g id="bitt-container-svg"></g>
-                                 <g id="berth-labels-container"></g>
-                             </g>
-                             
-                              <g id="truck-container-svg"></g>
-                             <g id="vessel-container-svg"></g>
-                         </svg>
-                     </div>
-                 </div>
- 
-                 <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                     <div class="bg-blue-600 text-white p-3 font-bold">
-                         Vessel Monitoring Status
-                     </div>
-                     <div class="overflow-x-auto h-64">
-                         <table class="w-full text-left">
-                             <thead class="bg-gray-50 sticky top-0">
-                                 <tr>
-                                     <th class="p-3 font-semibold">VesCallID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
-                                 </tr>
-                             </thead>
-                             <tbody id="vessel-table-body">
-                                 </tbody>
-                         </table>
-                     </div>
-                 </div>
-             </div>
- 
-             <div id="right-sidebar" class="lg:col-span-1 flex flex-col gap-4 transition-all duration-300">
-                 <div class="bg-white p-4 rounded-lg shadow-sm space-y-6">
-                     <div class="grid grid-cols-2 gap-4">
-                         <div>
-                             <h3 class="font-bold mb-4 text-lg">Operation Type</h3>
-                             <div class="space-y-3">
-                                 <label class="flex items-center text-base"><div class="w-5 h-5 bg-green-500 rounded-sm mr-3"></div>Import</label>
-                                 <label class="flex items-center text-base"><div class="w-5 h-5 bg-blue-500 rounded-sm mr-3"></div>Export</label>
-                                 <label class="flex items-center text-base"><div class="w-5 h-5 bg-purple-500 rounded-sm mr-3"></div>Both</label>
-                             </div>
-                         </div>
-                         <div>
-                             <h3 class="font-bold mb-4 text-lg">Vessel Status</h3>
-                             <div class="space-y-3">
-                                 <label class="flex items-center text-base"><div class="w-5 h-5 border-4 border-yellow-400 rounded-sm mr-3"></div>On Working</label>
-                                 <label class="flex items-center text-base"><div class="w-5 h-5 border-4 border-red-500 rounded-sm mr-3"></div>Non Working</label>
-                             </div>
-                         </div>
-                     </div>
-                     <div class="border-t border-gray-200"></div>
-                     <div>
-                         <h2 id="vessel-name-display" class="text-xl font-bold text-gray-800 break-all">-</h2>
-                         <div class="mt-2">
-                             <label for="unit-type" class="block text-base font-bold text-gray-700 mb-1">Unit Type</label>
-                             <select id="unit-type" name="unit-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-lg font-bold border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
-                                 <option>MT</option>
-                                 <option>M3</option>
-                                 <option>QTY</option>
-                             </select>
-                         </div>
-                     </div>
- 
-                     <div id="discharging-section" class="space-y-3">
-                         </div>
-                     
-                     <div id="loading-section" class="space-y-3">
-                         </div>
-                 </div>
-             </div>
-         </main>
-     </div>
- 
-     <script>
-     document.addEventListener('DOMContentLoaded', () => {
- 
-         // --- DATA ---
-         function generateVesselData() {
-             const data = [];
-             const names = ["OCEANIC", "NEPTUNE", "TRITON", "POSEIDON", "ATLANTIS", "VOYAGER", "DISCOVERY", "PIONEER", "EXPLORER", "NAVIGATOR", "MARINER", "SEAFARER", "ISLANDER", "COASTER", "MERCHANT", "TRADER", "CARRIER", "CLIPPER", "NOMAD", "ROVER", "PATHFINDER", "VENTURER", "CRUSADER", "PILGRIM"];
-             const commodities = ["Electronics", "Apparel", "Grain", "Steel Coils", "Crude Oil", "LNG", "Vehicles", "Lumber", "Chemicals", "Produce"];
-             const opTypes = ['import', 'export', 'both'];
-             const vesselTypes = ["Bulk Carrier", "Liquid Bulk", "General Cargo"];
-             
-             const berths = [
-                 // Pier 1 - Left Side (5 berths)
-                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+1}`, x: 125, y: 105 + i * 85, width: 20, height: 80})),
-                 // Pier 1 - Right Side (5 berths)
-                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+6}`, x: 355, y: 105 + i * 85, width: 20, height: 80})),
-                 // Top Connecting Pier (5 berths)
-                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+11}`, x: 380 + i * 95, y: 75, width: 90, height: 20})),
-                 // Pier 2 - Left Side (5 berths)
-                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+16}`, x: 825, y: 105 + i * 85, width: 20, height: 80})),
-                 // Pier 2 - Right Side (4 berths)
-                 ...Array(4).fill(0).map((_, i) => ({berthNo: `B${i+21}`, x: 1055, y: 105 + i * 85, width: 20, height: 80})),
-             ];
- 
-             let vesselIdCounter = 1;
-             const baseDate = new Date('2025-07-15T16:35:00');
+            </div>
+        </header>
 
-             for (let i = 0; i < 24; i++) {
-                 const opType = opTypes[i % opTypes.length];
-                 const status = (i % 4 === 0) ? 'non-working' : 'working';
-                 const hasDischarge = opType === 'import' || opType === 'both';
-                 const hasLoad = opType === 'export' || opType === 'both';
-                 const isDoubleBanked = i === 2 || i === 17; // TRITON 3, CLIPPER 18
-                 
-                 const atb = new Date(baseDate.getTime() - i * 3 * 3600 * 1000 - Math.random() * 3600 * 1000);
-                 const ata = new Date(atb.getTime() - Math.random() * 2 * 3600 * 1000); // ATA is 0-2 hours before ATB
-                 const etd = new Date(atb.getTime() + (2 + Math.floor(Math.random() * 5)) * 24 * 3600 * 1000);
+        <!-- RESPONSIVE: Grid layout adjusts for different screen sizes -->
+        <main id="main-grid" class="flex-grow grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+            <!-- RESPONSIVE: Main content area spans full width on smaller screens, 2/3 on extra large screens -->
+            <div id="left-column" class="xl:col-span-2 flex flex-col gap-4 transition-all duration-300">
+
+                <div class="bg-white p-2 sm:p-4 rounded-lg shadow-sm flex flex-col flex-grow">
+                    <!-- RESPONSIVE: SVG container height is now relative to viewport height (vh) -->
+                    <div id="svg-container" class="w-full min-h-[300px] h-[50vh] sm:h-[60vh] border border-gray-200 rounded-lg bg-cyan-100 cursor-pointer" title="Nháy đúp hoặc nhấn 'F' để mở rộng">
+                        <svg id="berth-svg" width="100%" height="100%" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet">
+                            <defs>
+                                <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#005c97;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#363795;stop-opacity:1" />
+                                </linearGradient>
+                                <pattern id="water" patternUnits="userSpaceOnUse" width="80" height="80">
+                                    <g fill="none" stroke="#fff" stroke-width="0.5">
+                                        <path d="M -20 20 Q 0 0, 20 20 T 60 20">
+                                            <animate attributeName="d" dur="3s" repeatCount="indefinite" values="M -20 20 Q 0 0, 20 20 T 60 20; M -20 20 Q 0 40, 20 20 T 60 20; M -20 20 Q 0 0, 20 20 T 60 20"/>
+                                        </path>
+                                        <path d="M -20 60 Q 0 40, 20 60 T 60 60">
+                                             <animate attributeName="d" dur="3.5s" repeatCount="indefinite" values="M -20 60 Q 0 40, 20 60 T 60 60; M -20 60 Q 0 80, 20 60 T 60 60; M -20 60 Q 0 40, 20 60 T 60 60"/>
+                                        </path>
+                                    </g>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#waterGradient)" />
+                            <rect width="100%" height="100%" fill="url(#water)" opacity="0.3" />
+                            
+                            <g id="port-layout">
+                                <rect x="0" y="0" width="1200" height="100" fill="#d1d5db"/>
+                                <path d="M 150 100 V 550 H 350 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
+                                <path d="M 850 100 V 550 H 1050 V 100 Z" fill="#a8a29e" stroke="#78716c" stroke-width="2" />
+                                
+                                <g id="road-lanes-container"></g>
+                                <g id="bitt-container-svg"></g>
+                                <g id="berth-labels-container"></g>
+                            </g>
+                            
+                             <g id="truck-container-svg"></g>
+                            <g id="vessel-container-svg"></g>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div class="bg-blue-600 text-white p-3 font-bold">
+                        Trạng thái Giám sát Tàu
+                    </div>
+                    <div class="overflow-x-auto h-64">
+                        <table class="w-full text-left min-w-[1200px]">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="p-3 font-semibold">VesCallID</th><th class="p-3 font-semibold">Tên Tàu</th><th class="p-3 font-semibold">Số Cầu</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Nhóm Hàng hóa</th><th class="p-3 font-semibold">Hàng hóa</th><th class="p-3 font-semibold">Đậu đôi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vessel-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESPONSIVE: Sidebar spans full width on smaller screens, 1/3 on extra large screens -->
+            <div id="right-sidebar" class="xl:col-span-1 flex flex-col gap-4 transition-all duration-300">
+                <div class="bg-white p-4 rounded-lg shadow-sm space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <h3 class="font-bold mb-4 text-base sm:text-lg">Loại hình Khai thác</h3>
+                            <div class="space-y-3 text-sm sm:text-base">
+                                <label class="flex items-center"><div class="w-5 h-5 bg-green-500 rounded-sm mr-3"></div>Nhập khẩu</label>
+                                <label class="flex items-center"><div class="w-5 h-5 bg-blue-500 rounded-sm mr-3"></div>Xuất khẩu</label>
+                                <label class="flex items-center"><div class="w-5 h-5 bg-purple-500 rounded-sm mr-3"></div>Cả hai</label>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-bold mb-4 text-base sm:text-lg">Trạng thái Tàu</h3>
+                            <div class="space-y-3 text-sm sm:text-base">
+                                <label class="flex items-center"><div class="w-5 h-5 border-4 border-yellow-400 rounded-sm mr-3"></div>Đang hoạt động</label>
+                                <label class="flex items-center"><div class="w-5 h-5 border-4 border-red-500 rounded-sm mr-3"></div>Không hoạt động</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-200"></div>
+                    <div>
+                        <h2 id="vessel-name-display" class="text-lg sm:text-xl font-bold text-gray-800 break-all">-</h2>
+                        <div class="mt-2">
+                            <label for="unit-type" class="block text-sm sm:text-base font-bold text-gray-700 mb-1">Đơn vị tính</label>
+                            <select id="unit-type" name="unit-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base font-bold border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                                <option>MT</option>
+                                <option>M3</option>
+                                <option>QTY</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="discharging-section" class="space-y-3">
+                        </div>
+                    
+                    <div id="loading-section" class="space-y-3">
+                        </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- DATA ---
+        function generateVesselData() {
+            const data = [];
+            const names = ["OCEANIC", "NEPTUNE", "TRITON", "POSEIDON", "ATLANTIS", "VOYAGER", "DISCOVERY", "PIONEER", "EXPLORER", "NAVIGATOR", "MARINER", "SEAFARER", "ISLANDER", "COASTER", "MERCHANT", "TRADER", "CARRIER", "CLIPPER", "NOMAD", "ROVER", "PATHFINDER", "VENTURER", "CRUSADER", "PILGRIM"];
+            const commodities = ["Electronics", "Apparel", "Grain", "Steel Coils", "Crude Oil", "LNG", "Vehicles", "Lumber", "Chemicals", "Produce"];
+            const opTypes = ['import', 'export', 'both'];
+            const vesselTypes = ["Bulk Carrier", "Liquid Bulk", "General Cargo"];
+            
+            const berths = [
+                // Pier 1 - Left Side (5 berths)
+                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+1}`, x: 125, y: 105 + i * 85, width: 20, height: 80})),
+                // Pier 1 - Right Side (5 berths)
+                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+6}`, x: 355, y: 105 + i * 85, width: 20, height: 80})),
+                // Top Connecting Pier (5 berths)
+                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+11}`, x: 380 + i * 95, y: 75, width: 90, height: 20})),
+                // Pier 2 - Left Side (5 berths)
+                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+16}`, x: 825, y: 105 + i * 85, width: 20, height: 80})),
+                // Pier 2 - Right Side (4 berths)
+                ...Array(4).fill(0).map((_, i) => ({berthNo: `B${i+21}`, x: 1055, y: 105 + i * 85, width: 20, height: 80})),
+            ];
+
+            let vesselIdCounter = 1;
+            const baseDate = new Date('2025-07-15T16:35:00');
+
+            for (let i = 0; i < 24; i++) {
+                const opType = opTypes[i % opTypes.length];
+                const status = (i % 4 === 0) ? 'non-working' : 'working';
+                const hasDischarge = opType === 'import' || opType === 'both';
+                const hasLoad = opType === 'export' || opType === 'both';
+                const isDoubleBanked = i === 2 || i === 17; // TRITON 3, CLIPPER 18
+                
+                const atb = new Date(baseDate.getTime() - i * 3 * 3600 * 1000 - Math.random() * 3600 * 1000);
+                const ata = new Date(atb.getTime() - Math.random() * 2 * 3600 * 1000); // ATA is 0-2 hours before ATB
+                const etd = new Date(atb.getTime() + (2 + Math.floor(Math.random() * 5)) * 24 * 3600 * 1000);
 
 
-                 const mainVessel = {
-                     id: `vessel-${vesselIdCounter++}`,
-                     name: `${names[i]} ${i+1}`,
-                     vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}`,
-                     vesselType: vesselTypes[i % vesselTypes.length],
-                     ata: ata,
-                     atb: atb,
-                     etd: etd,
-                     berthNo: berths[i].berthNo,
-                     shipCallNo: `SC${1001+i}`,
-                     loa: 150 + (i * 10 % 150),
-                     mt: 20000 + (i * 5000),
-                     commodityGroup: 'Mixed',
-                     commodity: commodities[i % commodities.length],
-                     doubleBanking: isDoubleBanked,
-                     status: status,
-                     operationType: opType,
-                     position: berths[i],
-                     data: {
-                         discharging: {
-                             total: { MT: hasDischarge ? 50000 : 0, M3: hasDischarge ? 32000 : 0, QTY: hasDischarge ? 2000 : 0 },
-                             warehouse: { MT: { current: hasDischarge ? 5000 : 0, total: 15000 }, M3: { current: hasDischarge ? 3200 : 0, total: 9600 }, QTY: { current: hasDischarge ? 200 : 0, total: 600 } },
-                             truck: { MT: { current: hasDischarge ? 7500 : 0, total: 10000 }, M3: { current: hasDischarge ? 4800 : 0, total: 6400 }, QTY: { current: hasDischarge ? 300 : 0, total: 400 } },
-                             barge: { MT: { current: hasDischarge && isDoubleBanked ? 12500 : 0, total: 25000 }, M3: { current: hasDischarge && isDoubleBanked ? 8000 : 0, total: 16000 }, QTY: { current: hasDischarge && isDoubleBanked ? 500 : 0, total: 1000 } }
-                         },
-                         loading: {
-                             total: { MT: hasLoad ? 40000 : 0, M3: hasLoad ? 24000 : 0, QTY: hasLoad ? 1800 : 0 },
-                             warehouse: { MT: { current: hasLoad ? 10000 : 0, total: 15000 }, M3: { current: hasLoad ? 6000 : 0, total: 9000 }, QTY: { current: hasLoad ? 500 : 0, total: 700 } },
-                             truck: { MT: { current: hasLoad ? 15000 : 0, total: 20000 }, M3: { current: hasLoad ? 9000 : 0, total: 12000 }, QTY: { current: hasLoad ? 700 : 0, total: 900 } },
-                             barge: { MT: { current: 0, total: 5000 }, M3: { current: 0, total: 3000 }, QTY: { current: 0, total: 200 } }
-                         }
-                     }
-                 };
-                 data.push(mainVessel);
- 
-                 if (isDoubleBanked) {
-                     const bargePos = {...mainVessel.position};
-                     if (mainVessel.position.x === 125 || mainVessel.position.x === 825) {
-                         bargePos.x -= 25;
-                     } else {
-                         bargePos.x += 25;
-                     }
-                     bargePos.height *= 0.8;
-                     bargePos.width *= 0.8;
- 
-                     data.push({
-                         id: `vessel-${vesselIdCounter++}`,
-                         name: `${names[i]} BARGE`,
-                         vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}-B`,
-                         vesselType: 'Barge',
-                         ata: mainVessel.ata,
-                         atb: mainVessel.atb, 
-                         etd: mainVessel.etd, 
-                         berthNo: `${mainVessel.berthNo} (DB)`,
-                         shipCallNo: `SC${1001+i}-B`, loa: 80, mt: 10000,
-                         commodityGroup: mainVessel.commodityGroup, commodity: mainVessel.commodity,
-                         doubleBanking: false, status: 'working', operationType: 'export',
-                         position: bargePos,
-                         data: {
-                             discharging: { total: { MT: 0, M3: 0, QTY: 0 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } } },
-                             loading: { total: { MT: 25000, M3: 16000, QTY: 1000 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 12500, total: 25000 }, M3: { current: 8000, total: 16000 }, QTY: { current: 500, total: 1000 } } }
-                         }
-                     });
-                 }
-             }
-             return data;
-         }
-         
-         let vesselData = generateVesselData();
-         let currentVessel = null;
- 
-         // --- DOM ELEMENTS ---
-         const svgContainer = document.getElementById('svg-container');
-         const berthSvg = document.getElementById('berth-svg');
-         const vesselContainer = document.getElementById('vessel-container-svg');
-         const truckContainer = document.getElementById('truck-container-svg');
-         const roadLanesContainer = document.getElementById('road-lanes-container');
-         const berthLabelsContainer = document.getElementById('berth-labels-container');
-         const bittContainer = document.getElementById('bitt-container-svg');
-         const vesselNameDisplay = document.getElementById('vessel-name-display');
-         const unitTypeSelect = document.getElementById('unit-type');
-         const dischargingSection = document.getElementById('discharging-section');
-         const loadingSection = document.getElementById('loading-section');
-         const vesselTableBody = document.getElementById('vessel-table-body');
-         const tooltip = document.getElementById('tooltip');
-         const toggleSidebarBtn = document.getElementById('toggle-sidebar');
-         const leftColumn = document.getElementById('left-column');
-         const rightSidebar = document.getElementById('right-sidebar');
-         const toggleIcon = document.getElementById('toggle-icon');
-         const refreshButton = document.getElementById('refresh-button');
-         const fullscreenModal = document.getElementById('fullscreen-modal');
-         const fullscreenContent = document.getElementById('fullscreen-content');
-         const closeFullscreenBtn = document.getElementById('close-fullscreen');
-         const dateTimeInput = document.getElementById('current-datetime');
-         const progressOverlay = document.getElementById('progress-overlay');
-         const progressBarInner = document.getElementById('progress-bar-inner');
+                const mainVessel = {
+                    id: `vessel-${vesselIdCounter++}`,
+                    name: `${names[i]} ${i+1}`,
+                    vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}`,
+                    vesselType: vesselTypes[i % vesselTypes.length],
+                    ata: ata,
+                    atb: atb,
+                    etd: etd,
+                    berthNo: berths[i].berthNo,
+                    shipCallNo: `SC${1001+i}`,
+                    loa: 150 + (i * 10 % 150),
+                    mt: 20000 + (i * 5000),
+                    commodityGroup: 'Mixed',
+                    commodity: commodities[i % commodities.length],
+                    doubleBanking: isDoubleBanked,
+                    status: status,
+                    operationType: opType,
+                    position: berths[i],
+                    data: {
+                        discharging: {
+                            total: { MT: hasDischarge ? 50000 : 0, M3: hasDischarge ? 32000 : 0, QTY: hasDischarge ? 2000 : 0 },
+                            warehouse: { MT: { current: hasDischarge ? 48000 : 0, total: 50000 }, M3: { current: hasDischarge ? 3200 : 0, total: 9600 }, QTY: { current: hasDischarge ? 200 : 0, total: 600 } },
+                            truck: { MT: { current: hasDischarge ? 7500 : 0, total: 10000 }, M3: { current: hasDischarge ? 4800 : 0, total: 6400 }, QTY: { current: hasDischarge ? 300 : 0, total: 400 } },
+                            barge: { MT: { current: hasDischarge && isDoubleBanked ? 12500 : 0, total: 25000 }, M3: { current: hasDischarge && isDoubleBanked ? 8000 : 0, total: 16000 }, QTY: { current: hasDischarge && isDoubleBanked ? 500 : 0, total: 1000 } }
+                        },
+                        loading: {
+                            total: { MT: hasLoad ? 40000 : 0, M3: hasLoad ? 24000 : 0, QTY: hasLoad ? 1800 : 0 },
+                            warehouse: { MT: { current: hasLoad ? 38000 : 0, total: 40000 }, M3: { current: hasLoad ? 6000 : 0, total: 9000 }, QTY: { current: hasLoad ? 500 : 0, total: 700 } },
+                            truck: { MT: { current: hasLoad ? 15000 : 0, total: 20000 }, M3: { current: hasLoad ? 9000 : 0, total: 12000 }, QTY: { current: hasLoad ? 700 : 0, total: 900 } },
+                            barge: { MT: { current: 0, total: 5000 }, M3: { current: 0, total: 3000 }, QTY: { current: 0, total: 200 } }
+                        }
+                    }
+                };
+                data.push(mainVessel);
 
-         // --- FUNCTIONS ---
- 
-         function updateDateTime() {
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const formattedDateTime = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-            dateTimeInput.value = formattedDateTime;
+                if (isDoubleBanked) {
+                    const bargePos = {...mainVessel.position};
+                    if (mainVessel.position.x === 125 || mainVessel.position.x === 825) {
+                        bargePos.x -= 25;
+                    } else {
+                        bargePos.x += 25;
+                    }
+                    bargePos.height *= 0.8;
+                    bargePos.width *= 0.8;
+
+                    data.push({
+                        id: `vessel-${vesselIdCounter++}`,
+                        name: `${names[i]} BARGE`,
+                        vesCallId: `VSL-25-${String(1001 + i).padStart(4, '0')}-B`,
+                        vesselType: 'Barge',
+                        ata: mainVessel.ata,
+                        atb: mainVessel.atb, 
+                        etd: mainVessel.etd, 
+                        berthNo: `${mainVessel.berthNo} (DB)`,
+                        shipCallNo: `SC${1001+i}-B`, loa: 80, mt: 10000,
+                        commodityGroup: mainVessel.commodityGroup, commodity: mainVessel.commodity,
+                        doubleBanking: false, status: 'working', operationType: 'export',
+                        position: bargePos,
+                        data: {
+                            discharging: { total: { MT: 0, M3: 0, QTY: 0 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } } },
+                            loading: { total: { MT: 25000, M3: 16000, QTY: 1000 }, warehouse: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, truck: { MT: { current: 0, total: 0 }, M3: { current: 0, total: 0 }, QTY: { current: 0, total: 0 } }, barge: { MT: { current: 12500, total: 25000 }, M3: { current: 8000, total: 16000 }, QTY: { current: 500, total: 1000 } } }
+                        }
+                    });
+                }
+            }
+            return data;
         }
+        
+        let vesselData = generateVesselData();
+        let currentVessel = null;
+
+        // --- DOM ELEMENTS ---
+        const svgContainer = document.getElementById('svg-container');
+        const berthSvg = document.getElementById('berth-svg');
+        
+        const vesselNameDisplay = document.getElementById('vessel-name-display');
+        const unitTypeSelect = document.getElementById('unit-type');
+        const dischargingSection = document.getElementById('discharging-section');
+        const loadingSection = document.getElementById('loading-section');
+        const vesselTableBody = document.getElementById('vessel-table-body');
+        const tooltip = document.getElementById('tooltip');
+        const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+        const leftColumn = document.getElementById('left-column');
+        const rightSidebar = document.getElementById('right-sidebar');
+        const toggleIcon = document.getElementById('toggle-icon');
+        const refreshButton = document.getElementById('refresh-button');
+        const fullscreenModal = document.getElementById('fullscreen-modal');
+        const fullscreenContent = document.getElementById('fullscreen-content');
+        const dateTimeInput = document.getElementById('current-datetime');
+        const progressOverlay = document.getElementById('progress-overlay');
+        const progressBarInner = document.getElementById('progress-bar-inner');
+
+        // --- FUNCTIONS ---
+
+        function updateDateTime() {
+           const now = new Date();
+           const day = String(now.getDate()).padStart(2, '0');
+           const month = String(now.getMonth() + 1).padStart(2, '0');
+           const year = now.getFullYear();
+           const hours = String(now.getHours()).padStart(2, '0');
+           const minutes = String(now.getMinutes()).padStart(2, '0');
+           const seconds = String(now.getSeconds()).padStart(2, '0');
+           const formattedDateTime = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+           dateTimeInput.value = formattedDateTime;
+       }
 
         function formatNumber(num) {
             return Number(num).toLocaleString('en-US', {
@@ -395,179 +420,194 @@
             return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
 
-         function getOperationColor(operationType) {
-             switch (operationType) {
-                 case 'import': return '#48bb78'; // green-500
-                 case 'export': return '#4299e1'; // blue-500
-                 case 'both': return '#9f7aea'; // purple-500
-                 default: return '#a0aec0'; // gray-500
-             }
-         }
-         
-         function getStatusColor(status) {
-              return status === 'working' ? '#ecc94b' : '#f56565'; // yellow-400 or red-500
-         }
- 
-         function renderVessels() {
-             vesselContainer.innerHTML = vesselData.map(vessel => {
-                 const fillColor = getOperationColor(vessel.operationType);
-                 const strokeColor = getStatusColor(vessel.status);
-                 const isVertical = vessel.position.width < vessel.position.height;
-                 const textRotation = isVertical ? -90 : 0;
-                 const textX = vessel.position.width / 2;
-                 const textY = vessel.position.height / 2;
-                 const pos = vessel.position;
-                 
-                 let craneHTML = '';
-                 if (!vessel.berthNo.includes('(DB)')) {
-                     const isWorking = vessel.status === 'working';
-                     let craneX, craneY, armLength, armHeight, trolleyWidth, trolleyHeight, hookPath;
-                     let trolleyAnimation = '';
- 
-                     if (pos.y < 100) { 
-                         craneX = pos.x + pos.width / 2 - 25;
-                         craneY = pos.y + pos.height;
-                         armLength = 50; armHeight = 30; trolleyWidth = 5; trolleyHeight = 10;
-                         hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
-                         if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; ${armLength - trolleyWidth} 0; 0 0" dur="5s" repeatCount="indefinite" />`;
-                     } else { 
-                         armLength = 30; armHeight = 50; trolleyWidth = 10; trolleyHeight = 5;
-                         hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
-                         if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; 0 ${armHeight - trolleyHeight}; 0 0" dur="5s" repeatCount="indefinite" />`;
-                         craneY = pos.y + pos.height / 2 - 25;
- 
-                         if (pos.x < 200) {
-                             craneX = pos.x + pos.width;
-                         } else if (pos.x < 500) {
-                             craneX = pos.x - armLength;
-                         } else if (pos.x < 900) {
-                             craneX = pos.x + pos.width;
-                         } else {
-                             craneX = pos.x - armLength;
-                         }
-                     }
-                     
-                     craneHTML = `
-                         <g class="crane" transform="translate(${craneX}, ${craneY})">
-                             <rect width="${armLength}" height="${armHeight}" fill="#4a5568" opacity="0.9" />
-                             <g class="crane-trolley">
-                                 ${trolleyAnimation}
-                                 <rect width="${trolleyWidth}" height="${trolleyHeight}" fill="#1f2937" />
-                                 <path d="${hookPath}" stroke="#111827" stroke-width="2" />
-                             </g>
-                         </g>
-                     `;
-                 }
- 
-                 return `
-                     <g>
-                         <g class="vessel-bar-svg" data-vessel-id="${vessel.id}" transform="translate(${pos.x}, ${pos.y})">
-                             <rect 
-                                 width="${pos.width}" 
-                                 height="${pos.height}"
-                                 fill="${fillColor}"
-                                 stroke="${strokeColor}"
-                                 rx="3"
-                                 stroke-width="4" />
-                             <text x="${textX}" y="${textY}" 
-                                 fill="white" font-size="10" font-weight="bold" 
-                                 text-anchor="middle" dominant-baseline="middle"
-                                 transform="rotate(${textRotation}, ${textX}, ${textY})"
-                                 style="pointer-events: none;">
-                                 ${vessel.name}
-                             </text>
-                         </g>
-                         ${craneHTML}
-                     </g>
-                 `;
-             }).join('');
-         }
-         
-         function renderBerthLabels() {
-             const uniqueBerths = [...new Map(vesselData.filter(v => !v.berthNo.includes('(DB)')).map(v => [v.berthNo, v])).values()];
-             berthLabelsContainer.innerHTML = uniqueBerths.map(vessel => {
-                 const pos = vessel.position;
-                 let x, y, rotation = 0;
- 
-                 if (pos.y < 100) { 
-                     x = pos.x + pos.width / 2;
-                     y = pos.y - 15;
-                     rotation = 0;
-                 } else if (pos.x < 200) {
-                     x = pos.x - 15;
-                     y = pos.y + pos.height / 2;
-                     rotation = -90;
-                 } else if (pos.x < 500) {
-                     x = pos.x + pos.width + 15;
-                     y = pos.y + pos.height / 2;
-                     rotation = 90;
-                 } else if (pos.x < 900) {
-                     x = pos.x - 15;
-                     y = pos.y + pos.height / 2;
-                     rotation = -90;
-                 } else {
-                     x = pos.x + pos.width + 15;
-                     y = pos.y + pos.height / 2;
-                     rotation = 90;
-                 }
-                 return `<text x="${x}" y="${y}" class="berth-label" transform="rotate(${rotation}, ${x}, ${y})">${vessel.berthNo}</text>`;
-             }).join('');
-         }
- 
- 
-         function renderBitts() {
-             const bittSpacing = 20;
-             let bittHTML = '';
-             const pierEdges = [
-                 { start: { x: 150, y: 100 }, end: { x: 150, y: 550 } },
-                 { start: { x: 350, y: 100 }, end: { x: 350, y: 550 } },
-                 { start: { x: 350, y: 100 }, end: { x: 850, y: 100 } },
-                 { start: { x: 850, y: 100 }, end: { x: 850, y: 550 } },
-                 { start: { x: 1050, y: 100 }, end: { x: 1050, y: 550 } },
-             ];
- 
-             pierEdges.forEach(edge => {
-                 const dx = edge.end.x - edge.start.x;
-                 const dy = edge.end.y - edge.start.y;
-                 const length = Math.sqrt(dx*dx + dy*dy);
-                 const numBitts = Math.floor(length / bittSpacing);
-                 
-                 for (let i = 1; i <= numBitts; i++) {
-                     const x = edge.start.x + (dx / length) * (i * bittSpacing);
-                     const y = edge.start.y + (dy / length) * (i * bittSpacing);
-                     bittHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#ef4444" />`;
-                 }
-             });
-             bittContainer.innerHTML = bittHTML;
-         }
-         
-         function renderRoadLanes() {
-            let lanesHTML = '';
-            const lineSpacing = 25;
-            const stroke = 'stroke="#f59e0b" stroke-width="2" stroke-dasharray="10 5"'; // Dashed line
-
-            // Main horizontal roads
-            lanesHTML += `<path d="M 0 60 L 1200 60" ${stroke} />`; // Outgoing lane
-            lanesHTML += `<path d="M 0 85 L 1200 85" ${stroke} />`; // Incoming lane
-
-            // Pier 1 roads
-            lanesHTML += `<path d="M 240 100 L 240 550" ${stroke} />`; // Outgoing lane
-            lanesHTML += `<path d="M 265 100 L 265 550" ${stroke} />`; // Incoming lane
-
-            // Pier 2 roads
-            lanesHTML += `<path d="M 940 100 L 940 550" ${stroke} />`; // Outgoing lane
-            lanesHTML += `<path d="M 965 100 L 965 550" ${stroke} />`; // Incoming lane
-
-            roadLanesContainer.innerHTML = lanesHTML;
+        function getOperationColor(operationType) {
+            switch (operationType) {
+                case 'import': return '#48bb78'; // green-500
+                case 'export': return '#4299e1'; // blue-500
+                case 'both': return '#9f7aea'; // purple-500
+                default: return '#a0aec0'; // gray-500
+            }
         }
- 
-         function renderTrucks() {
+        
+        function getStatusColor(status) {
+             return status === 'working' ? '#ecc94b' : '#f56565'; // yellow-400 or red-500
+        }
+
+        function renderVessels(targetSvg) {
+            targetSvg.querySelector('#vessel-container-svg').innerHTML = vesselData.map(vessel => {
+                const fillColor = getOperationColor(vessel.operationType);
+                const strokeColor = getStatusColor(vessel.status);
+                const isVertical = vessel.position.width < vessel.position.height;
+                const textRotation = isVertical ? -90 : 0;
+                const textX = vessel.position.width / 2;
+                const textY = vessel.position.height / 2;
+                const pos = vessel.position;
+                
+                let craneHTML = '';
+                if (!vessel.berthNo.includes('(DB)')) {
+                    const isWorking = vessel.status === 'working';
+                    let craneX, craneY, armLength, armHeight, trolleyWidth, trolleyHeight, hookPath;
+                    let trolleyAnimation = '';
+
+                    if (pos.y < 100) { 
+                        craneX = pos.x + pos.width / 2 - 25;
+                        craneY = pos.y + pos.height;
+                        armLength = 50; armHeight = 30; trolleyWidth = 5; trolleyHeight = 10;
+                        hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
+                        if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; ${armLength - trolleyWidth} 0; 0 0" dur="5s" repeatCount="indefinite" />`;
+                    } else { 
+                        armLength = 30; armHeight = 50; trolleyWidth = 10; trolleyHeight = 5;
+                        hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
+                        if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; 0 ${armHeight - trolleyHeight}; 0 0" dur="5s" repeatCount="indefinite" />`;
+                        craneY = pos.y + pos.height / 2 - 25;
+
+                        if (pos.x < 200) {
+                            craneX = pos.x + pos.width;
+                        } else if (pos.x < 500) {
+                            craneX = pos.x - armLength;
+                        } else if (pos.x < 900) {
+                            craneX = pos.x + pos.width;
+                        } else {
+                            craneX = pos.x - armLength;
+                        }
+                    }
+                    
+                    craneHTML = `
+                        <g class="crane" transform="translate(${craneX}, ${craneY})">
+                            <rect width="${armLength}" height="${armHeight}" fill="#4a5568" opacity="0.9" />
+                            <g class="crane-trolley">
+                                ${trolleyAnimation}
+                                <rect width="${trolleyWidth}" height="${trolleyHeight}" fill="#1f2937" />
+                                <path d="${hookPath}" stroke="#111827" stroke-width="2" />
+                            </g>
+                        </g>
+                    `;
+                }
+
+                return `
+                    <g>
+                        <g class="vessel-bar-svg" data-vessel-id="${vessel.id}" transform="translate(${pos.x}, ${pos.y})">
+                            <rect 
+                                width="${pos.width}" 
+                                height="${pos.height}"
+                                fill="${fillColor}"
+                                stroke="${strokeColor}"
+                                rx="3"
+                                stroke-width="4" />
+                            <text x="${textX}" y="${textY}" 
+                                fill="white" font-size="10" font-weight="bold" 
+                                text-anchor="middle" dominant-baseline="middle"
+                                transform="rotate(${textRotation}, ${textX}, ${textY})"
+                                style="pointer-events: none;">
+                                ${vessel.name}
+                            </text>
+                        </g>
+                        ${craneHTML}
+                    </g>
+                `;
+            }).join('');
+        }
+        
+        function renderBerthLabels(targetSvg) {
+            const uniqueBerths = [...new Map(vesselData.filter(v => !v.berthNo.includes('(DB)')).map(v => [v.berthNo, v])).values()];
+            targetSvg.querySelector('#berth-labels-container').innerHTML = uniqueBerths.map(vessel => {
+                const pos = vessel.position;
+                let x, y, rotation = 0;
+
+                if (pos.y < 100) { 
+                    x = pos.x + pos.width / 2;
+                    y = pos.y - 15;
+                    rotation = 0;
+                } else if (pos.x < 200) {
+                    x = pos.x - 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = -90;
+                } else if (pos.x < 500) {
+                    x = pos.x + pos.width + 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = 90;
+                } else if (pos.x < 900) {
+                    x = pos.x - 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = -90;
+                } else {
+                    x = pos.x + pos.width + 15;
+                    y = pos.y + pos.height / 2;
+                    rotation = 90;
+                }
+                return `<text x="${x}" y="${y}" class="berth-label" transform="rotate(${rotation}, ${x}, ${y})">${vessel.berthNo}</text>`;
+            }).join('');
+        }
+
+
+        function renderBitts(targetSvg) {
+            const bittSpacing = 20;
+            let bittHTML = '';
+            const pierEdges = [
+                { start: { x: 150, y: 100 }, end: { x: 150, y: 550 } },
+                { start: { x: 350, y: 100 }, end: { x: 350, y: 550 } },
+                { start: { x: 350, y: 100 }, end: { x: 850, y: 100 } },
+                { start: { x: 850, y: 100 }, end: { x: 850, y: 550 } },
+                { start: { x: 1050, y: 100 }, end: { x: 1050, y: 550 } },
+            ];
+
+            pierEdges.forEach(edge => {
+                const dx = edge.end.x - edge.start.x;
+                const dy = edge.end.y - edge.start.y;
+                const length = Math.sqrt(dx*dx + dy*dy);
+                const numBitts = Math.floor(length / bittSpacing);
+                
+                for (let i = 1; i <= numBitts; i++) {
+                    const x = edge.start.x + (dx / length) * (i * bittSpacing);
+                    const y = edge.start.y + (dy / length) * (i * bittSpacing);
+                    bittHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#ef4444" />`;
+                }
+            });
+            targetSvg.querySelector('#bitt-container-svg').innerHTML = bittHTML;
+        }
+        
+        function renderRoadLanes(targetSvg) {
+           let lanesHTML = '';
+           const stroke = 'stroke="#f59e0b" stroke-width="2" stroke-dasharray="10 5"';
+
+           // Add 3 new horizontal lanes at the top
+           lanesHTML += `<path d="M 0 15 L 1200 15" ${stroke} />`;
+           lanesHTML += `<path d="M 0 30 L 1200 30" ${stroke} />`;
+           lanesHTML += `<path d="M 0 45 L 1200 45" ${stroke} />`;
+
+           // Existing main horizontal roads
+           lanesHTML += `<path d="M 0 60 L 1200 60" ${stroke} />`; // Outgoing lane
+           lanesHTML += `<path d="M 0 85 L 1200 85" ${stroke} />`; // Incoming lane
+
+           // Pier 1 roads
+           lanesHTML += `<path d="M 175 100 L 175 550" ${stroke} />`;
+           lanesHTML += `<path d="M 200 100 L 200 550" ${stroke} />`;
+           lanesHTML += `<path d="M 300 100 L 300 550" ${stroke} />`;
+           lanesHTML += `<path d="M 325 100 L 325 550" ${stroke} />`;
+           
+           // Pier 2 roads
+           lanesHTML += `<path d="M 875 100 L 875 550" ${stroke} />`;
+           lanesHTML += `<path d="M 900 100 L 900 550" ${stroke} />`;
+           lanesHTML += `<path d="M 1000 100 L 1000 550" ${stroke} />`;
+           lanesHTML += `<path d="M 1025 100 L 1025 550" ${stroke} />`;
+
+           // Main truck lanes (solid and on top)
+           const solidStroke = 'stroke="#f59e0b" stroke-width="3"';
+           lanesHTML += `<path d="M 240 100 L 240 550" ${solidStroke} />`; // Pier 1 Outgoing
+           lanesHTML += `<path d="M 265 100 L 265 550" ${solidStroke} />`; // Pier 1 Incoming
+           lanesHTML += `<path d="M 940 100 L 940 550" ${solidStroke} />`; // Pier 2 Outgoing
+           lanesHTML += `<path d="M 965 100 L 965 550" ${solidStroke} />`; // Pier 2 Incoming
+
+           targetSvg.querySelector('#road-lanes-container').innerHTML = lanesHTML;
+       }
+
+        function renderTrucks(targetSvg) {
             let truckHTML = '';
             const truckColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
             
             const workingVessels = vesselData.filter(v => v.status === 'working' && !v.berthNo.includes('(DB)'));
             if (workingVessels.length === 0) {
-                truckContainer.innerHTML = '';
+                targetSvg.querySelector('#truck-container-svg').innerHTML = '';
                 return;
             }
 
@@ -637,230 +677,347 @@
                 truckHTML += `
                     <g>
                         <g>
-                             <animateMotion 
-                                 dur="${totalDuration}s" 
-                                 begin="${i * 1.5}s" 
-                                 repeatCount="indefinite" 
-                                 rotate="auto"
-                                 path="${fullPath}"
-                                 keyTimes="${keyTimes}"
-                                 keyPoints="${keyPoints}"
-                                 calcMode="linear"
-                                 />
-                            <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
-                            <rect x="4" y="-5" width="8" height="10" fill="#6b7280" rx="1" />
+                            <animateMotion 
+                                dur="${totalDuration}s" 
+                                begin="${i * 1.5}s" 
+                                repeatCount="indefinite" 
+                                rotate="auto"
+                                path="${fullPath}"
+                                keyTimes="${keyTimes}"
+                                keyPoints="${keyPoints}"
+                                calcMode="linear"
+                                />
+                           <rect x="-10" y="-5" width="20" height="10" fill="${truckColors[i % truckColors.length]}" rx="2" />
+                           <rect x="4" y="-5" width="8" height="10" fill="#6b7280" rx="1" />
                         </g>
                     </g>
                 `;
             }
-            truckContainer.innerHTML = truckHTML;
+            targetSvg.querySelector('#truck-container-svg').innerHTML = truckHTML;
         }
-         
-         function renderTable() {
-             vesselTableBody.innerHTML = vesselData.map(vessel => {
-                 const isChecked = vessel.doubleBanking ? 'checked' : '';
-                 const rowClass = vessel.status === 'working' ? 'hover:bg-gray-50' : 'bg-red-50 hover:bg-red-100';
-                 return `
-                     <tr data-vescallid="${vessel.vesCallId}" class="border-b ${rowClass}">
-                         <td class="p-3">${vessel.vesCallId}</td>
-                         <td class="p-3">${vessel.name}</td>
-                         <td class="p-3">${vessel.berthNo}</td>
-                         <td class="p-3">${vessel.shipCallNo}</td>
-                         <td class="p-3">${vessel.loa}</td>
-                         <td class="p-3">${formatVesselDate(vessel.atb)}</td>
-                         <td class="p-3">${formatVesselDate(vessel.etd)}</td>
-                         <td class="p-3">${formatNumber(vessel.mt)}</td>
-                         <td class="p-3">${vessel.commodityGroup}</td>
-                         <td class="p-3">${vessel.commodity}</td>
-                         <td class="p-3 text-center"><input type="checkbox" ${isChecked} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" disabled></td>
-                     </tr>
-                 `;
-             }).join('');
-         }
-         
-         function updateSidebar(vessel) {
-            currentVessel = vessel;
+        
+        function renderTable() {
+            vesselTableBody.innerHTML = vesselData.map(vessel => {
+                const isChecked = vessel.doubleBanking ? 'checked' : '';
+                const rowClass = vessel.status === 'working' ? 'hover:bg-gray-50' : 'bg-red-50 hover:bg-red-100';
+                return `
+                    <tr data-vescallid="${vessel.vesCallId}" class="border-b ${rowClass}">
+                        <td class="p-3">${vessel.vesCallId}</td>
+                        <td class="p-3">${vessel.name}</td>
+                        <td class="p-3">${vessel.berthNo}</td>
+                        <td class="p-3">${vessel.shipCallNo}</td>
+                        <td class="p-3">${vessel.loa}</td>
+                        <td class="p-3">${formatVesselDate(vessel.atb)}</td>
+                        <td class="p-3">${formatVesselDate(vessel.etd)}</td>
+                        <td class="p-3">${formatNumber(vessel.mt)}</td>
+                        <td class="p-3">${vessel.commodityGroup}</td>
+                        <td class="p-3">${vessel.commodity}</td>
+                        <td class="p-3 text-center"><input type="checkbox" ${isChecked} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" disabled></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function updateSidebar(vessel) {
+           currentVessel = vessel;
 
-            const vesselIndex = vesselData.findIndex(v => v.id === vessel.id);
-            if (vesselIndex > -1) {
-                const [selectedVesselItem] = vesselData.splice(vesselIndex, 1);
-                vesselData.unshift(selectedVesselItem);
-            }
+           const vesselIndex = vesselData.findIndex(v => v.id === vessel.id);
+           if (vesselIndex > -1) {
+               const [selectedVesselItem] = vesselData.splice(vesselIndex, 1);
+               vesselData.unshift(selectedVesselItem);
+           }
 
-            renderTable();
+           renderTable();
 
-            vesselNameDisplay.innerHTML = `<span class="font-bold">${vessel.name}</span> <span class="text-gray-500 font-normal">/ ${vessel.vesCallId}</span>`;
-            
+           vesselNameDisplay.innerHTML = `<span class="font-bold">${vessel.name}</span> <span class="text-gray-500 font-normal">/ ${vessel.vesCallId}</span>`;
+           
             document.querySelectorAll('.vessel-bar-svg').forEach(bar => bar.classList.remove('selected-svg'));
             const svgElement = document.querySelector(`[data-vessel-id='${vessel.id}']`);
             if (svgElement) {
                 svgElement.classList.add('selected-svg');
             }
 
-            vesselTableBody.querySelectorAll('tr').forEach(row => row.classList.remove('selected-row'));
-            const tableRow = vesselTableBody.querySelector(`tr[data-vescallid="${vessel.vesCallId}"]`);
-            if (tableRow) {
-                tableRow.classList.add('selected-row');
+            // Also apply to the fullscreen SVG if it exists
+            const fullscreenSvgElement = fullscreenContent.querySelector(`[data-vessel-id='${vessel.id}']`);
+            if (fullscreenSvgElement) {
+                 fullscreenContent.querySelectorAll('.vessel-bar-svg').forEach(bar => bar.classList.remove('selected-svg'));
+                 fullscreenSvgElement.classList.add('selected-svg');
             }
 
-            updateProgressBars();
-        }
- 
-         function createProgressHTML(title, data, unit, colorClass = 'bg-blue-500') {
-             const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
-             return `
-                 <div class="border border-gray-300 rounded-lg p-3 ml-4">
-                     <p class="text-gray-600">${title}: ${formatNumber(data.current)} / ${formatNumber(data.total)} (${unit}) ${percentage.toFixed(2)}%</p>
-                     <div class="progress-bar-container mt-1"><div class="progress-bar ${colorClass}" style="width: ${percentage}%;"></div></div>
-                 </div>
-             `;
-         }
- 
-         function updateProgressBars() {
-             if (!currentVessel) {
-                 dischargingSection.innerHTML = '';
-                 loadingSection.innerHTML = '';
-                 return;
-             }
- 
-             const unit = unitTypeSelect.value;
-             
-             // --- Discharging Section ---
-             const discharge = currentVessel.data.discharging;
-             const totalDischarge = discharge.total[unit];
-             
-             if (totalDischarge > 0) {
-                 dischargingSection.classList.remove('hidden');
-                 const totalDischargeCurrent = discharge.warehouse[unit].current + discharge.truck[unit].current + discharge.barge[unit].current;
-                 const dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
-                 let dischargingHTML = `
-                     <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
-                         <h4 class="font-bold text-blue-800">Discharging</h4>
-                         <p class="font-semibold text-gray-600">Total: ${formatNumber(totalDischargeCurrent)} / ${formatNumber(totalDischarge)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
-                         <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
-                     </div>
-                 `;
-                 if (discharge.warehouse[unit].total > 0) {
-                    dischargingHTML += createProgressHTML('To Warehouse', discharge.warehouse[unit], unit);
-                 }
-                 if (discharge.truck[unit].total > 0) {
-                    dischargingHTML += createProgressHTML('Direct by Truck', discharge.truck[unit], unit);
-                 }
-                 if (discharge.barge[unit].total > 0) {
-                    dischargingHTML += createProgressHTML('Direct by Barge', discharge.barge[unit], unit);
-                 }
-                 dischargingSection.innerHTML = dischargingHTML;
-             } else {
-                 dischargingSection.innerHTML = '';
-                 dischargingSection.classList.add('hidden');
-             }
- 
-             // --- Loading Section ---
-             const loading = currentVessel.data.loading;
-             const totalLoading = loading.total[unit];
- 
-             if (totalLoading > 0) {
-                 loadingSection.classList.remove('hidden');
-                 const totalLoadingCurrent = loading.warehouse[unit].current + loading.truck[unit].current + loading.barge[unit].current;
-                 const loadingPercentage = (totalLoadingCurrent / totalLoading) * 100;
-                 let loadingHTML = `
-                     <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
-                         <h4 class="font-bold text-yellow-800">Loading</h4>
-                         <p class="font-semibold text-gray-600">Total: ${formatNumber(totalLoadingCurrent)} / ${formatNumber(totalLoading)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
-                         <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
-                     </div>
-                 `;
-                if(loading.warehouse[unit].total > 0) {
-                    loadingHTML += createProgressHTML('From Warehouse', loading.warehouse[unit], unit, 'bg-yellow-500');
-                }
-                if(loading.truck[unit].total > 0) {
-                    loadingHTML += createProgressHTML('Direct by Truck', loading.truck[unit], unit, 'bg-yellow-500');
-                }
-                if(loading.barge[unit].total > 0) {
-                    loadingHTML += createProgressHTML('Direct by Barge', loading.barge[unit], unit, 'bg-yellow-500');
-                }
-                 loadingSection.innerHTML = loadingHTML;
-             } else {
-                 loadingSection.innerHTML = '';
-                 loadingSection.classList.add('hidden');
-             }
-         }
-         
-         function fullRender() {
-             vesselData = generateVesselData();
-             // Default sort: latest ATB first
-             vesselData.sort((a, b) => b.atb.getTime() - a.atb.getTime());
+           vesselTableBody.querySelectorAll('tr').forEach(row => row.classList.remove('selected-row'));
+           const tableRow = vesselTableBody.querySelector(`tr[data-vescallid="${vessel.vesCallId}"]`);
+           if (tableRow) {
+               tableRow.classList.add('selected-row');
+           }
 
-             renderRoadLanes();
-             renderVessels();
-             renderBerthLabels();
-             renderBitts();
-             renderTrucks();
-             
-             // On initial load, select the first vessel (latest ATB) and render everything
-             if (vesselData.length > 0) {
-                 updateSidebar(vesselData[0]);
-             }
-         }
- 
-         // --- EVENT LISTENERS ---
- 
-         vesselContainer.addEventListener('click', (e) => {
-             const vesselEl = e.target.closest('[data-vessel-id]');
-             if (vesselEl) {
-                 const vesselId = vesselEl.dataset.vesselId;
-                 const selectedVesselData = vesselData.find(v => v.id === vesselId);
-                 if (selectedVesselData) {
-                     updateSidebar(selectedVesselData);
-                 }
-             }
-         });
- 
-         vesselContainer.addEventListener('mouseover', (e) => {
-             const vesselEl = e.target.closest('[data-vessel-id]');
-             if (vesselEl) {
-                 const vesselId = vesselEl.dataset.vesselId;
-                 const vessel = vesselData.find(v => v.id === vesselId);
-                 if (vessel) {
-                     tooltip.innerHTML = `
-                         <div class='font-bold text-base mb-1'>${vessel.name}</div>
-                         <div><strong>Type:</strong> ${vessel.vesselType || 'N/A'}</div>
-                         <div><strong>ATA:</strong> ${formatVesselDate(vessel.ata)}</div>
-                         <div><strong>ATB:</strong> ${formatVesselDate(vessel.atb)}</div>
-                         <div><strong>ETD:</strong> ${formatVesselDate(vessel.etd)}</div>
-                     `;
-                     tooltip.style.display = 'block';
-                 }
-             }
-         });
- 
-         document.addEventListener('mousemove', (e) => {
-             tooltip.style.left = (e.clientX + 15) + 'px';
-             tooltip.style.top = (e.clientY + 15) + 'px';
-         });
- 
-         vesselContainer.addEventListener('mouseout', () => {
-             tooltip.style.display = 'none';
-         });
- 
-         unitTypeSelect.addEventListener('change', () => {
-              updateProgressBars();
-         });
-         
-         toggleSidebarBtn.addEventListener('click', () => {
-             rightSidebar.classList.toggle('hidden');
-             leftColumn.classList.toggle('lg:col-span-2');
-             leftColumn.classList.toggle('lg:col-span-3');
-             
-             const isHidden = rightSidebar.classList.contains('hidden');
-             toggleIcon.innerHTML = isHidden ? 
-                  `<path fill-rule="evenodd" d="M10.354 1.646a.5.5 0 0 1 0 .708L4.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
-                   <path fill-rule="evenodd" d="M6.354 1.646a.5.5 0 0 1 0 .708L.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>` :
-                  `<path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
-                   <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>`;
-         });
- 
-         refreshButton.addEventListener('click', () => {
+           updateProgressBars();
+       }
+
+        function createProgressHTML(title, data, unit, colorClass = 'bg-blue-500') {
+            const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
+            return `
+                <div class="border border-gray-300 rounded-lg p-3 ml-4">
+                    <p class="text-gray-600">${title}: <span class="count-up" data-target="${data.current}">0</span> / ${formatNumber(data.total)} (${unit}) ${percentage.toFixed(2)}%</p>
+                    <div class="progress-bar-container mt-1"><div class="progress-bar ${colorClass}" style="width: ${percentage}%;"></div></div>
+                </div>
+            `;
+        }
+
+        function animateCountUp(element, target, duration) {
+            let start = 0;
+            let startTime = null;
+
+            const step = (timestamp) => {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                const current = Math.floor(progress * (target - start) + start);
+                element.innerText = formatNumber(current);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    element.innerText = formatNumber(target); // Ensure it ends on the exact number
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function triggerConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                // since particles fall down, start a bit higher than random
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function updateProgressBars() {
+            if (!currentVessel) {
+                dischargingSection.innerHTML = '';
+                loadingSection.innerHTML = '';
+                return;
+            }
+
+            const unit = unitTypeSelect.value;
+            
+            // --- Discharging Section ---
+            const discharge = currentVessel.data.discharging;
+            const totalDischarge = discharge.total[unit];
+            
+            if (totalDischarge > 0) {
+                dischargingSection.classList.remove('hidden');
+                const totalDischargeCurrent = discharge.warehouse[unit].current + discharge.truck[unit].current + discharge.barge[unit].current;
+                const dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
+
+                let dischargingHTML = `
+                    <div class="border border-blue-300 bg-blue-50 rounded-lg p-3">
+                        <h4 class="font-bold text-blue-800">Dỡ hàng</h4>
+                        <p class="font-semibold text-gray-600">Tổng cộng: <span class="count-up" data-target="${totalDischargeCurrent}">0</span> / ${formatNumber(totalDischarge)} (${unit}) ${dischargePercentage.toFixed(2)}%</p>
+                        <div class="progress-bar-container mt-1"><div class="progress-bar" style="width: ${dischargePercentage}%;"></div></div>
+                    </div>
+                `;
+                if (discharge.warehouse[unit].total > 0) {
+                  dischargingHTML += createProgressHTML('Vào Kho', discharge.warehouse[unit], unit);
+                }
+                if (discharge.truck[unit].total > 0) {
+                  dischargingHTML += createProgressHTML('Giao thẳng bằng Xe tải', discharge.truck[unit], unit);
+                }
+                if (discharge.barge[unit].total > 0) {
+                  dischargingHTML += createProgressHTML('Giao thẳng bằng Sà lan', discharge.barge[unit], unit);
+                }
+                dischargingSection.innerHTML = dischargingHTML;
+            } else {
+                dischargingSection.innerHTML = '';
+                dischargingSection.classList.add('hidden');
+            }
+
+            // --- Loading Section ---
+            const loading = currentVessel.data.loading;
+            const totalLoading = loading.total[unit];
+
+            if (totalLoading > 0) {
+                loadingSection.classList.remove('hidden');
+                const totalLoadingCurrent = loading.warehouse[unit].current + loading.truck[unit].current + loading.barge[unit].current;
+                const loadingPercentage = (totalLoadingCurrent / totalLoading) * 100;
+
+                let loadingHTML = `
+                    <div class="border border-yellow-400 bg-yellow-50 rounded-lg p-3">
+                        <h4 class="font-bold text-yellow-800">Xếp hàng</h4>
+                        <p class="font-semibold text-gray-600">Tổng cộng: <span class="count-up" data-target="${totalLoadingCurrent}">0</span> / ${formatNumber(totalLoading)} (${unit}) ${loadingPercentage.toFixed(2)}%</p>
+                        <div class="progress-bar-container mt-1"><div class="progress-bar bg-yellow-500" style="width: ${loadingPercentage}%;"></div></div>
+                    </div>
+                `;
+               if(loading.warehouse[unit].total > 0) {
+                   loadingHTML += createProgressHTML('Từ Kho', loading.warehouse[unit], unit, 'bg-yellow-500');
+               }
+               if(loading.truck[unit].total > 0) {
+                   loadingHTML += createProgressHTML('Giao thẳng bằng Xe tải', loading.truck[unit], unit, 'bg-yellow-500');
+               }
+               if(loading.barge[unit].total > 0) {
+                   loadingHTML += createProgressHTML('Giao thẳng bằng Sà lan', loading.barge[unit], unit, 'bg-yellow-500');
+               }
+                loadingSection.innerHTML = loadingHTML;
+            } else {
+                loadingSection.innerHTML = '';
+                loadingSection.classList.add('hidden');
+            }
+
+            // Trigger count-up animation
+            document.querySelectorAll(`#discharging-section .count-up, #loading-section .count-up`).forEach(span => {
+                const target = parseInt(span.dataset.target, 10);
+                if (!isNaN(target)) {
+                    animateCountUp(span, target, 1000); // Animation duration: 1 second
+                }
+            });
+        }
+        
+        function initialRender() {
+           vesselData.sort((a, b) => b.atb.getTime() - a.atb.getTime());
+           fullRender(berthSvg);
+            if (vesselData.length > 0) {
+                updateSidebar(vesselData[0]);
+            }
+        }
+
+        function fullRender(targetSvg) {
+            renderRoadLanes(targetSvg);
+            renderVessels(targetSvg);
+            renderBerthLabels(targetSvg);
+            renderBitts(targetSvg);
+            renderTrucks(targetSvg);
+            renderTable();
+        }
+
+        function openFullscreen() {
+            if (fullscreenModal.classList.contains('visible')) return;
+
+            const clonedSvg = berthSvg.cloneNode(true);
+            fullscreenContent.innerHTML = ''; // Clear previous content
+
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/></svg>`;
+            closeBtn.className = "absolute top-4 right-4 text-gray-800 bg-white rounded-full p-2 z-10 hover:bg-gray-200";
+            closeBtn.addEventListener('click', closeFullscreen);
+            fullscreenContent.appendChild(closeBtn);
+
+            // Re-attach listeners for the cloned SVG
+            clonedSvg.addEventListener('click', handleVesselClick);
+            clonedSvg.addEventListener('mouseover', handleTooltipMouseOver);
+            clonedSvg.addEventListener('mouseout', handleTooltipMouseOut);
+
+            fullscreenContent.appendChild(clonedSvg);
+            
+            // Select current vessel in fullscreen view
+            if(currentVessel) {
+                const fullscreenSvgElement = fullscreenContent.querySelector(`[data-vessel-id='${currentVessel.id}']`);
+                if(fullscreenSvgElement) fullscreenSvgElement.classList.add('selected-svg');
+            }
+
+            fullscreenModal.classList.remove('hidden');
+            fullscreenModal.classList.add('flex');
+            setTimeout(() => fullscreenModal.classList.add('visible'), 10);
+        }
+
+        function closeFullscreen() {
+            fullscreenModal.classList.remove('visible');
+            setTimeout(() => {
+                fullscreenModal.classList.add('hidden');
+                fullscreenModal.classList.remove('flex');
+                fullscreenContent.innerHTML = '';
+                tooltip.style.display = 'none';
+            }, 400); // Match transition duration
+        }
+
+        // --- EVENT LISTENERS ---
+        
+        const handleTooltipMouseOver = (e) => {
+            const vesselEl = e.target.closest('.vessel-bar-svg');
+            if (vesselEl) {
+                const vesselId = vesselEl.dataset.vesselId;
+                const vessel = vesselData.find(v => v.id === vesselId);
+                if (vessel) {
+                    tooltip.innerHTML = `
+                        <div class='font-bold text-base mb-1'>${vessel.name}</div>
+                        <div><strong>Loại:</strong> ${vessel.vesselType || 'N/A'}</div>
+                        <div><strong>ATA:</strong> ${formatVesselDate(vessel.ata)}</div>
+                        <div><strong>ATB:</strong> ${formatVesselDate(vessel.atb)}</div>
+                        <div><strong>ETD:</strong> ${formatVesselDate(vessel.etd)}</div>
+                    `;
+                    tooltip.style.display = 'block';
+                }
+            }
+        };
+
+        const handleTooltipMouseOut = () => {
+            tooltip.style.display = 'none';
+        };
+
+        function handleVesselClick(e) {
+            const vesselEl = e.target.closest('.vessel-bar-svg');
+            if (vesselEl) {
+                const vesselId = vesselEl.dataset.vesselId;
+                const selectedVesselData = vesselData.find(v => v.id === vesselId);
+                if (selectedVesselData) {
+                    updateSidebar(selectedVesselData);
+
+                    // Check progress and trigger confetti on click
+                    const unit = unitTypeSelect.value;
+                    const discharge = selectedVesselData.data.discharging;
+                    const totalDischarge = discharge.total[unit];
+                    let dischargePercentage = 0;
+                    if (totalDischarge > 0) {
+                        const totalDischargeCurrent = discharge.warehouse[unit].current + discharge.truck[unit].current + discharge.barge[unit].current;
+                        dischargePercentage = (totalDischargeCurrent / totalDischarge) * 100;
+                    }
+
+                    const loading = selectedVesselData.data.loading;
+                    const totalLoading = loading.total[unit];
+                    let loadingPercentage = 0;
+                    if (totalLoading > 0) {
+                        const totalLoadingCurrent = loading.warehouse[unit].current + loading.truck[unit].current + loading.barge[unit].current;
+                        loadingPercentage = (totalLoadingCurrent / totalLoading) * 100;
+                    }
+
+                    if (dischargePercentage >= 90 || loadingPercentage >= 90) {
+                        triggerConfetti();
+                    }
+                }
+            }
+        }
+
+        // Attach listeners to the main SVG container
+        berthSvg.addEventListener('click', handleVesselClick);
+        berthSvg.addEventListener('mouseover', handleTooltipMouseOver);
+        berthSvg.addEventListener('mouseout', handleTooltipMouseOut);
+
+        document.addEventListener('mousemove', (e) => {
+            tooltip.style.left = (e.clientX + 15) + 'px';
+            tooltip.style.top = (e.clientY + 15) + 'px';
+        });
+
+        unitTypeSelect.addEventListener('change', () => {
+             updateProgressBars();
+        });
+        
+        toggleSidebarBtn.addEventListener('click', () => {
+            rightSidebar.classList.toggle('hidden');
+            leftColumn.classList.toggle('xl:col-span-2');
+        });
+
+        refreshButton.addEventListener('click', () => {
             progressOverlay.classList.remove('hidden');
             progressOverlay.classList.add('flex');
             progressBarInner.style.width = '0%'; // Reset first
@@ -868,7 +1025,7 @@
 
             setTimeout(() => {
                 vesselData = generateVesselData(); 
-                fullRender();
+                initialRender();
                 updateDateTime();
                 
                 progressOverlay.classList.add('hidden');
@@ -876,58 +1033,32 @@
                 progressBarInner.classList.remove('progress-bar-animated');
             }, 1000); // 1 second delay
         });
-         
-         svgContainer.addEventListener('dblclick', () => {
-            const clonedSvg = berthSvg.cloneNode(true);
-            fullscreenContent.innerHTML = ''; // Clear previous content
-
-            const newVesselElements = clonedSvg.querySelectorAll('.vessel-bar-svg');
-            newVesselElements.forEach(el => {
-                el.addEventListener('mouseover', (e) => {
-                    const vesselId = el.dataset.vesselId;
-                    const vessel = vesselData.find(v => v.id === vesselId);
-                    if (vessel) {
-                        tooltip.innerHTML = `
-                            <div class='font-bold text-base mb-1'>${vessel.name}</div>
-                            <div><strong>Type:</strong> ${vessel.vesselType || 'N/A'}</div>
-                            <div><strong>ATA:</strong> ${formatVesselDate(vessel.ata)}</div>
-                            <div><strong>ATB:</strong> ${formatVesselDate(vessel.atb)}</div>
-                            <div><strong>ETD:</strong> ${formatVesselDate(vessel.etd)}</div>
-                        `;
-                        tooltip.style.display = 'block';
-                    }
-                });
-                el.addEventListener('mouseout', () => {
-                    tooltip.style.display = 'none';
-                });
-            });
-
-            fullscreenContent.appendChild(clonedSvg);
-            
-            const closeBtnClone = closeFullscreenBtn.cloneNode(true);
-            closeBtnClone.id = 'fullscreen-close-clone';
-            closeBtnClone.addEventListener('click', () => {
-                fullscreenModal.classList.add('hidden');
-                fullscreenModal.classList.remove('flex');
-                fullscreenContent.innerHTML = '';
-                tooltip.style.display = 'none';
-            });
-            fullscreenContent.appendChild(closeBtnClone);
-            
-            fullscreenModal.classList.remove('hidden');
-            fullscreenModal.classList.add('flex');
+        
+        svgContainer.addEventListener('dblclick', openFullscreen);
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                fullscreenModal.classList.contains('visible') ? closeFullscreen() : openFullscreen();
+            }
+            if (e.key === 'Escape' && fullscreenModal.classList.contains('visible')) {
+                closeFullscreen();
+            }
         });
- 
-         closeFullscreenBtn.addEventListener('click', () => {
-             fullscreenModal.classList.add('hidden');
-             fullscreenModal.classList.remove('flex');
-             tooltip.style.display = 'none';
-         });
- 
-         // --- INITIALIZATION ---
-         updateDateTime();
-         fullRender();
-     });
-     </script>
- </body>
- </html>
+
+        // --- INITIALIZATION ---
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+        initialRender();
+
+        // Auto-open cinematic view on first load
+        if (!sessionStorage.getItem('berthMonitorFirstLoad')) {
+            setTimeout(() => {
+                openFullscreen();
+                sessionStorage.setItem('berthMonitorFirstLoad', 'false');
+            }, 500);
+        }
+    });
+    </script>
+</body>
+</html>
