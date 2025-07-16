@@ -100,6 +100,9 @@
             transition: transform 0.3s ease-in-out;
             transform-origin: center center;
         }
+        #toggle-icon {
+            transition: transform 0.3s ease-in-out;
+        }
 
     </style>
 </head>
@@ -205,7 +208,7 @@
                         <table class="w-full text-left min-w-[1200px]">
                             <thead class="bg-gray-50 sticky top-0">
                                 <tr>
-                                    <th class="p-3 font-semibold">Vessel Call ID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
+                                    <th class="p-3 font-semibold">Vessel CallID</th><th class="p-3 font-semibold">Vessel Name</th><th class="p-3 font-semibold">Berth No</th><th class="p-3 font-semibold">Ship Call No</th><th class="p-3 font-semibold">LOA</th><th class="p-3 font-semibold">ATB</th><th class="p-3 font-semibold">ETD</th><th class="p-3 font-semibold">MT</th><th class="p-3 font-semibold">Commodity Group</th><th class="p-3 font-semibold">Commodity</th><th class="p-3 font-semibold">Double Banking</th>
                                 </tr>
                             </thead>
                             <tbody id="vessel-table-body">
@@ -1015,6 +1018,8 @@
         toggleSidebarBtn.addEventListener('click', () => {
             rightSidebar.classList.toggle('hidden');
             leftColumn.classList.toggle('xl:col-span-2');
+            leftColumn.classList.toggle('xl:col-span-3');
+            toggleIcon.classList.toggle('rotate-180');
         });
 
         refreshButton.addEventListener('click', () => {
