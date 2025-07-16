@@ -286,8 +286,8 @@
                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+1}`, x: 125, y: 105 + i * 85, width: 20, height: 80})),
                 // Pier 1 - Right Side (5 berths)
                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+6}`, x: 355, y: 105 + i * 85, width: 20, height: 80})),
-                // Top Connecting Pier (5 berths)
-                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+11}`, x: 380 + i * 95, y: 75, width: 90, height: 20})),
+                // Top Connecting Pier (5 berths) - MOVED TO SEA
+                ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+11}`, x: 380 + i * 95, y: 100, width: 90, height: 20})),
                 // Pier 2 - Left Side (5 berths)
                 ...Array(5).fill(0).map((_, i) => ({berthNo: `B${i+16}`, x: 825, y: 105 + i * 85, width: 20, height: 80})),
                 // Pier 2 - Right Side (4 berths)
@@ -379,6 +379,7 @@
         
         let vesselData = generateVesselData();
         let currentVessel = null;
+        let bittPositions = []; // Mảng toàn cục để lưu trữ vị trí các bitts
 
         // --- DOM ELEMENTS ---
         const svgContainer = document.getElementById('svg-container');
@@ -460,14 +461,15 @@
                     const isWorking = vessel.status === 'working';
                     let craneX, craneY, armLength, armHeight, trolleyWidth, trolleyHeight, hookPath;
                     let trolleyAnimation = '';
+                    const isHorizontal = pos.width > pos.height;
 
-                    if (pos.y < 100) { 
+                    if (isHorizontal) { // For horizontal vessels (top pier)
                         craneX = pos.x + pos.width / 2 - 25;
                         armLength = 50; armHeight = 30; trolleyWidth = 5; trolleyHeight = 10;
-                        craneY = pos.y - armHeight; // Position crane on the land side (above the pier)
-                        hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
+                        craneY = 100 - armHeight; // Place crane on the land, at the edge of the pier
+                        hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 35`; // Make hook long enough to reach over the vessel
                         if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; ${armLength - trolleyWidth} 0; 0 0" dur="5s" repeatCount="indefinite" />`;
-                    } else { 
+                    } else { // For vertical vessels (side piers)
                         armLength = 30; armHeight = 50; trolleyWidth = 10; trolleyHeight = 5;
                         hookPath = `M ${trolleyWidth/2} ${trolleyHeight} V 15`;
                         if(isWorking) trolleyAnimation = `<animateTransform attributeName="transform" type="translate" values="0 0; 0 ${armHeight - trolleyHeight}; 0 0" dur="5s" repeatCount="indefinite" />`;
@@ -525,18 +527,20 @@
             targetSvg.querySelector('#berth-labels-container').innerHTML = uniqueBerths.map(vessel => {
                 const pos = vessel.position;
                 let x, y, rotation = 0;
-                const offset = 25; // Increased offset for better visibility
-                let labelClass = "berth-label-sea"; // Default to sea class for visibility
+                const offset = 25;
+                let labelClass = "berth-label-sea";
+                const isHorizontal = pos.width > pos.height;
 
-                if (pos.y < 100) { // Top berths (B11-B15) -> Sea is below
+                if (isHorizontal) { // Top berths (B11-B15)
                     x = pos.x + pos.width / 2;
-                    y = pos.y + pos.height + offset; 
+                    // FIX: Place the label in the sea area below the vessel for better visibility and consistency.
+                    y = pos.y + pos.height + 15;
+                    // The default class 'berth-label-sea' will be used, which has high contrast on the water.
                     rotation = 0;
                 } else { // Side Piers
                     y = pos.y + pos.height / 2;
-                    // Pier 1 is from x=150 to 350, Pier 2 is from x=850 to 1050
                     if (pos.x < 500) { // Pier 1
-                        if (pos.x < 250) {  // Left side of Pier 1, sea is to the left
+                        if (pos.x < 250) { // Left side of Pier 1, sea is to the left
                             x = pos.x - offset;
                             rotation = -90;
                         } else { // Right side of Pier 1, sea is to the right
@@ -559,6 +563,7 @@
 
 
         function renderBitts(targetSvg) {
+            bittPositions = []; // Đặt lại mảng mỗi khi render
             const bittSpacing = 20;
             let bittHTML = '';
             const pierEdges = [
@@ -578,6 +583,7 @@
                 for (let i = 1; i <= numBitts; i++) {
                     const x = edge.start.x + (dx / length) * (i * bittSpacing);
                     const y = edge.start.y + (dy / length) * (i * bittSpacing);
+                    bittPositions.push({ x, y }); // Lưu trữ tọa độ của bitt
                     bittHTML += `<circle cx="${x}" cy="${y}" r="3" fill="#ef4444" />`;
                 }
             });
@@ -623,6 +629,7 @@
             let truckHTML = '';
             const truckColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
             
+            // Lọc các tàu đang hoạt động để xe tải phục vụ
             const workingVessels = vesselData.filter(v => v.status === 'working' && !v.berthNo.includes('(DB)'));
             if (workingVessels.length === 0) {
                 targetSvg.querySelector('#truck-container-svg').innerHTML = '';
@@ -631,10 +638,11 @@
 
             const numTrucks = 25;
             for(let i=0; i < numTrucks; i++) {
+                // Chọn một tàu đang hoạt động ngẫu nhiên để xe tải đi đến
                 const targetVessel = workingVessels[i % workingVessels.length];
-                const onTopPier = targetVessel.position.y < 100;
+                const pos = targetVessel.position;
                 
-                // Define lanes
+                // Xác định các làn đường cho xe tải di chuyển
                 const mainInLaneY = 85;
                 const mainOutLaneY = 60;
                 const pier1InLaneX = 265;
@@ -642,18 +650,22 @@
                 const pier2InLaneX = 965;
                 const pier2OutLaneX = 940;
 
-                const startX = -50; // Start off-screen
-                const endX = 1250; // End off-screen
+                const startX = -50; // Bắt đầu từ ngoài màn hình bên trái
+                const endX = 1250; // Kết thúc ở ngoài màn hình bên phải
                 
                 let path;
                 let pauseProgress;
+                
+                // Tính toán vị trí đỗ xe dưới cần cẩu
+                let parkingX, parkingY;
+                const isHorizontal = pos.width > pos.height;
 
-                if (onTopPier) {
-                    const parkingX = targetVessel.position.x + targetVessel.position.width / 2;
-                    const parkingY = 45; // Parking lane above the main lanes
+                if (isHorizontal) { // Cầu tàu ngang (B11-B15)
+                    parkingX = pos.x + pos.width / 2;
+                    parkingY = pos.y - 15; // Vị trí ngay trên tàu, dưới cần cẩu
                     
-                    path = `M ${startX},${mainInLaneY} L ${parkingX},${mainInLaneY} L ${parkingX},${parkingY} ` + // Drive to parking spot
-                           `L ${parkingX},${mainOutLaneY} L ${endX},${mainOutLaneY}`; // Leave parking spot
+                    path = `M ${startX},${mainInLaneY} L ${parkingX},${mainInLaneY} L ${parkingX},${parkingY} ` + // Lái xe đến chỗ đậu
+                           `L ${parkingX},${mainOutLaneY} L ${endX},${mainOutLaneY}`; // Rời khỏi chỗ đậu
 
                     const l1 = parkingX - startX;
                     const l2 = Math.abs(parkingY - mainInLaneY);
@@ -661,45 +673,47 @@
                     const l4 = endX - parkingX;
                     const totalLength = l1 + l2 + l3 + l4;
                     
-                    // Pause happens after the truck reaches the parking spot (end of l2)
                     pauseProgress = (l1 + l2) / totalLength;
 
-                } else { // Side Piers
-                    const parkingY = targetVessel.position.y + targetVessel.position.height / 2;
+                } else { // Cầu tàu dọc
+                    parkingY = pos.y + pos.height / 2;
                     let inLaneX, outLaneX;
 
-                    if (targetVessel.position.x < 500) { // Pier 1
+                    if (pos.x < 500) { // Cầu tàu 1
                         inLaneX = pier1InLaneX;
                         outLaneX = pier1OutLaneX;
-                    } else { // Pier 2
+                        parkingX = pos.x < 250 ? pos.x + pos.width + 10 : pos.x - 10; // Đỗ xe bên cạnh tàu
+                    } else { // Cầu tàu 2
                         inLaneX = pier2InLaneX;
                         outLaneX = pier2OutLaneX;
+                        parkingX = pos.x < 950 ? pos.x + pos.width + 10 : pos.x - 10; // Đỗ xe bên cạnh tàu
                     }
-                    path = `M ${startX},${mainInLaneY} L ${inLaneX},${mainInLaneY} L ${inLaneX},${parkingY} ` + // Drive to parking spot
-                           `L ${outLaneX},${parkingY} L ${outLaneX},${mainOutLaneY} L ${endX},${mainOutLaneY}`; // Leave
+                    path = `M ${startX},${mainInLaneY} L ${inLaneX},${mainInLaneY} L ${inLaneX},${parkingY} L ${parkingX},${parkingY} ` + // Lái xe đến chỗ đậu
+                           `L ${inLaneX},${parkingY} L ${outLaneX},${parkingY} L ${outLaneX},${mainOutLaneY} L ${endX},${mainOutLaneY}`; // Rời đi
 
                     const l1 = inLaneX - startX;
                     const l2 = Math.abs(parkingY - mainInLaneY);
-                    const l3 = Math.abs(outLaneX - inLaneX);
-                    const l4 = Math.abs(mainOutLaneY - parkingY);
-                    const l5 = endX - outLaneX;
-                    const totalLength = l1 + l2 + l3 + l4 + l5;
+                    const l3 = Math.abs(parkingX - inLaneX);
+                    // Các đoạn đường còn lại để tính toán tiến trình tạm dừng
+                    const l4 = Math.abs(inLaneX - parkingX);
+                    const l5 = Math.abs(outLaneX - inLaneX);
+                    const l6 = Math.abs(mainOutLaneY - parkingY);
+                    const l7 = endX - outLaneX;
+                    const totalLength = l1 + l2 + l3 + l4 + l5 + l6 + l7;
 
-                    // The pause happens after the truck reaches the parking spot (end of l2), before it turns
-                    pauseProgress = (l1 + l2) / totalLength;
+                    pauseProgress = (l1 + l2 + l3) / totalLength;
                 }
 
-
                 const totalDuration = 20 + Math.random() * 10;
-                const pauseDuration = 2; // 2 seconds pause
+                const pauseDuration = 2; // Tạm dừng 2 giây theo yêu cầu
                 const travelDuration = totalDuration - pauseDuration;
 
-                // Calculate keyTimes based on the pause happening at a specific progress point
+                // Tính toán keyTimes để chèn khoảng dừng vào hoạt ảnh
                 const timeToPause = travelDuration * pauseProgress;
                 const timeAfterPause = timeToPause + pauseDuration;
 
                 const keyTimes = `0; ${timeToPause / totalDuration}; ${timeAfterPause / totalDuration}; 1`;
-                // Set keyPoints to pause at the calculated progress point
+                // Đặt keyPoints để làm cho hoạt ảnh dừng tại điểm tiến trình đã tính
                 const keyPoints = `0; ${pauseProgress}; ${pauseProgress}; 1`; 
 
                 truckHTML += `
